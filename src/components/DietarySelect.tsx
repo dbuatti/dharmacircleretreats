@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Select, 
   SelectContent, 
@@ -27,6 +27,8 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherText, setOtherText] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const otherInputRef = useRef<HTMLInputElement>(null);
 
   // Parse initial value into array
   const getTagsArray = (val: string) => {
@@ -50,11 +52,25 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   };
 
   const handleOtherSave = () => {
-    if (!otherText.trim()) return;
+    if (!otherText.trim()) {
+      setShowOtherInput(false);
+      return;
+    }
     const newTag = `Other: ${otherText.trim()}`;
-    updateValue([...tags, newTag]);
+    // Check if this specific "Other" tag already exists
+    if (!tags.some(t => t.startsWith('Other:'))) {
+      updateValue([...tags, newTag]);
+    } else {
+      // Replace existing "Other" tag
+      const newTags = tags.filter(t => !t.startsWith('Other:'));
+      updateValue([...newTags, newTag]);
+    }
     setOtherText('');
     setShowOtherInput(false);
+    // Keep focus on the input if they want to add another
+    if (otherInputRef.current) {
+      otherInputRef.current.focus();
+    }
   };
 
   const updateValue = (newTags: string[]) => {
@@ -85,7 +101,11 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
           Vegan
         </div>
       </SelectItem>
-      <SelectItem value="other" onClick={() => setShowOtherInput(true)}>
+      <SelectItem value="other" onClick={() => {
+        setShowOtherInput(true);
+        // Focus the input after the DOM updates
+        setTimeout(() => otherInputRef.current?.focus(), 50);
+      }}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-gray-300"></span>
           Other (Custom)
@@ -97,7 +117,15 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   if (isEditing) {
     return (
       <div className="flex flex-col gap-2 p-2 bg-white border rounded-md shadow-sm">
-        <Select open={true} onOpenChange={(open) => !open && setIsEditing(false)}>
+        <Select 
+          open={true} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsEditing(false);
+              setShowOtherInput(false);
+            }
+          }}
+        >
           <SelectTrigger className="w-full border-0 bg-gray-50">
             <SelectValue placeholder="Select dietary..." />
           </SelectTrigger>
@@ -107,11 +135,17 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
         {showOtherInput && (
           <div className="flex gap-1 animate-in fade-in slide-in-from-top-1">
             <Input 
+              ref={otherInputRef}
               placeholder="Enter allergy/restriction..." 
               value={otherText}
               onChange={(e) => setOtherText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleOtherSave();
+                }
+              }}
               className="h-7 text-xs"
-              autoFocus
             />
             <button 
               onClick={handleOtherSave}
