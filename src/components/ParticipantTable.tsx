@@ -1,375 +1,259 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import { Participant, RegistrationStatus, PaymentStatus, AttendanceStatus } from "@/types";
-import { InlineInput } from "./InlineInput";
-import { InlineSelect } from "./InlineSelect";
-import { DietarySelect } from "./DietarySelect"; // New Import
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Trash2, ArrowUpDown } from "lucide-react";
-import { BulkToolbar } from "./BulkToolbar";
+import React, { useState } from "react";
 import { 
-  registrationOptions, 
-  paymentOptions, 
-  attendanceOptions, 
-  whatsappOptions, 
-  accommodationOptions, 
-  transportationOptions 
-} from "@/utils/participant-options";
+  Mail, 
+  Phone, 
+  CheckCircle2, 
+  Trash2,
+  User,
+  Calendar,
+  Info,
+  UserCheck,
+  Edit,
+  Home,
+  Car,
+  Tag,
+  Clock,
+  MessageCircle
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Participant } from "@/types";
+import { format } from "date-fns";
+import { EditParticipantDialog } from "./EditParticipantDialog";
 
-// --- Simulated API Hook (Optimistic Update Pattern) ---
-const useUpdateParticipant = () => {
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const mutate = async (id: string, updates: Partial<Participant>) => {
-    setIsSyncing(true);
-    // Simulate network delay (500ms) and 5% error rate
-    const delay = new Promise(resolve => setTimeout(resolve, 500));
-    const errorChance = Math.random() < 0.05;
-
-    try {
-      await delay;
-      if (errorChance) throw new Error("Network error");
-      // In a real app, this is where you call your API
-      console.log(`API: Updated participant ${id}`, updates);
-      return { success: true };
-    } catch (error) {
-      console.error("API Error:", error);
-      throw error;
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  return { mutate, isSyncing };
-};
-
-interface ParticipantsTableProps {
+interface ParticipantTableProps {
   participants: Participant[];
-  onUpdateParticipant: (id: string, updates: Partial<Participant>) => void;
-  onDeleteParticipant: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Participant>) => void;
+  onDelete: (id: string) => void;
 }
 
-export const ParticipantsTable: React.FC<ParticipantsTableProps> = ({
-  participants,
-  onUpdateParticipant,
-  onDeleteParticipant,
+export const ParticipantTable: React.FC<ParticipantTableProps> = ({ 
+  participants, 
+  onUpdate,
+  onDelete 
 }) => {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Participant; direction: 'asc' | 'desc' } | null>(null);
-  const { mutate } = useUpdateParticipant();
+  const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
-  // --- Selection Logic ---
-  const handleSelect = (id: string, isSelected: boolean, shiftKey: boolean) => {
-    if (shiftKey && lastSelectedIndex !== null) {
-      const currentIndex = participants.findIndex(p => p.id === id);
-      const start = Math.min(lastSelectedIndex, currentIndex);
-      const end = Math.max(lastSelectedIndex, currentIndex);
-      const rangeIds = participants.slice(start, end + 1).map(p => p.id);
-      const newSelectedIds = new Set(selectedIds);
-      if (isSelected) rangeIds.forEach(id => newSelectedIds.add(id));
-      else rangeIds.forEach(id => newSelectedIds.delete(id));
-      setSelectedIds(Array.from(newSelectedIds));
-    } else {
-      setSelectedIds(prev => isSelected ? [...prev, id] : prev.filter(i => i !== id));
-    }
-    setLastSelectedIndex(participants.findIndex(p => p.id === id));
-  };
-
-  const handleSelectAll = (isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedIds(participants.map(p => p.id));
-      setLastSelectedIndex(0);
-    } else {
-      setSelectedIds([]);
-      setLastSelectedIndex(null);
-    }
-  };
-
-  // --- Bulk Actions ---
-  const handleBulkUpdate = async (updates: Partial<Participant>, mode: 'set' | 'append' | 'prepend' = 'set') => {
-    const idsToUpdate = [...selectedIds];
-    const updatePromises = idsToUpdate.map(id => mutate(id, updates));
-
-    // Optimistic Update: Update UI immediately
-    idsToUpdate.forEach(id => {
-      let finalUpdates = { ...updates };
-      
-      // Handle Append/Prepend for Notes and Tags
-      if (mode === 'append' || mode === 'prepend') {
-        const current = participants.find(p => p.id === id);
-        if (updates.notes && current?.notes) {
-          finalUpdates.notes = mode === 'append' 
-            ? `${current.notes} ${updates.notes}` 
-            : `${updates.notes} ${current.notes}`;
-        }
-        if (updates.tags && current?.tags) {
-          const newTags = updates.tags as string[];
-          const combined = mode === 'append'
-            ? [...current.tags, ...newTags]
-            : [...newTags, ...current.tags];
-          finalUpdates.tags = Array.from(new Set(combined)); // Remove duplicates
-        }
-        // Handle Dietary Append (Special Logic)
-        if (updates.dietary_requirements && current?.dietary_requirements) {
-          // Merge dietary strings intelligently
-          const currentDiet = current.dietary_requirements.split(',').map(t => t.trim());
-          const newDiet = updates.dietary_requirements.split(',').map(t => t.trim());
-          const combined = Array.from(new Set([...currentDiet, ...newDiet]));
-          finalUpdates.dietary_requirements = combined.join(', ');
-        }
-      }
-      
-      onUpdateParticipant(id, finalUpdates);
-    });
-
-    // Background Sync
-    try {
-      await Promise.all(updatePromises);
-      toast.success(`${idsToUpdate.length} participants updated`, {
-        action: {
-          label: "Undo",
-          onClick: () => {
-            toast.info("Undo functionality would restore previous state here");
-          }
-        }
-      });
-    } catch (error) {
-      toast.error("Sync failed. Rolling back changes.");
-      // Rollback logic would go here
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    const count = selectedIds.length;
-    if (!confirm(`Delete ${count} participants?`)) return;
-
-    // Optimistic Delete
-    const idsToDelete = [...selectedIds];
-    idsToDelete.forEach(id => onDeleteParticipant(id));
-    setSelectedIds([]);
-    
-    // Background Sync
-    try {
-      await new Promise(r => setTimeout(r, 500));
-      toast.error(`${count} participants deleted`);
-    } catch (error) {
-      toast.error("Delete failed");
-    }
-  };
-
-  // --- Sorting ---
-  const handleSort = (key: keyof Participant) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
-    }));
-  };
-
-  const sortedParticipants = useMemo(() => {
-    if (!sortConfig) return participants;
-    return [...participants].sort((a, b) => {
-      const aVal = a[sortConfig.key] || '';
-      const bVal = b[sortConfig.key] || '';
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [participants, sortConfig]);
-
-  // --- Hotkeys ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key === '/') {
-        e.preventDefault();
-        document.getElementById('search-input')?.focus();
-      }
-      if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        handleSelectAll(true);
-      }
-      if (e.key === 'Escape') {
-        setSelectedIds([]);
-      }
-      if (e.key === 'd' && selectedIds.length > 0) {
-        e.preventDefault();
-        handleBulkDelete();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && selectedIds.length > 0) {
-        e.preventDefault();
-        toast.info("Re-applying last bulk action...");
+  const getStatusBadge = (status: string, type: "registration" | "payment" | "attendance" | "whatsapp") => {
+    const styles = {
+      registration: {
+        not_sent: "bg-gray-200 text-gray-800",
+        sent: "bg-blue-100 text-blue-800",
+        received: "bg-purple-100 text-purple-800",
+        incomplete: "bg-orange-100 text-orange-800",
+        confirmed: "bg-green-100 text-green-800"
+      },
+      payment: {
+        not_paid: "bg-red-100 text-red-800",
+        deposit_paid: "bg-yellow-100 text-yellow-800",
+        paid_in_full: "bg-green-100 text-green-800"
+      },
+      attendance: {
+        interested: "bg-gray-100 text-gray-800",
+        confirmed: "bg-green-100 text-green-800",
+        withdrawn: "bg-red-100 text-red-800",
+        declined: "bg-red-200 text-red-900"
+      },
+      whatsapp: {
+        joined: "bg-green-100 text-green-800",
+        invited: "bg-blue-100 text-blue-800",
+        not_invited: "bg-gray-100 text-gray-600",
+        not_applicable: "bg-gray-50 text-gray-400"
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, participants]);
+    
+    const displayText = status.replace(/_/g, " ");
+    const typeKey = type === 'whatsapp' ? 'whatsapp' : type;
+    const statusKey = status as keyof typeof styles[typeof typeKey];
 
-  const isAllSelected = participants.length > 0 && selectedIds.length === participants.length;
+    return <Badge className={`${styles[typeKey][statusKey] || 'bg-gray-100 text-gray-600'} capitalize`}>{displayText}</Badge>;
+  };
+
+  const formatLogistics = (value: string | undefined) => {
+    if (!value || value === 'unknown') {
+      return <span className="text-gray-400 italic">N/A</span>;
+    }
+    return value.replace(/-/g, ' ');
+  };
+
+  const toggleRegistrationStatus = (p: Participant) => {
+    const newStatus = p.registration_status === "confirmed" ? "incomplete" : "confirmed";
+    onUpdate(p.id, { registration_status: newStatus });
+  };
+
+  const handleEdit = (p: Participant) => {
+    setEditingParticipant(p);
+    setShowEditDialog(true);
+  };
+
+  const handleSave = (id: string, updates: Partial<Participant>) => {
+    onUpdate(id, updates);
+    setEditingParticipant(null);
+    setShowEditDialog(false);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+      onDelete(id);
+    }
+  };
 
   return (
-    <div className="space-y-4 pb-20">
-      <div className="rounded-lg border shadow-sm overflow-hidden bg-white">
-        <Table className="min-w-[1200px]">
-          <TableHeader className="bg-gray-50 sticky top-0 z-10">
+    <>
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="w-[40px] sticky left-0 bg-gray-50 z-20">
-                <Checkbox 
-                  checked={isAllSelected}
-                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                />
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer hover:bg-gray-100 min-w-[200px] sticky left-[40px] bg-gray-50 z-20 border-r"
-                onClick={() => handleSort('full_name')}
-              >
-                <div className="flex items-center gap-1 font-semibold">Name <ArrowUpDown className="w-3 h-3" /></div>
-              </TableHead>
-              <TableHead className="min-w-[150px]">Status</TableHead>
-              <TableHead className="min-w-[120px]">Logistics</TableHead>
-              <TableHead className="min-w-[120px]">Health</TableHead>
-              <TableHead className="min-w-[150px]">Notes & Tags</TableHead>
-              <TableHead className="w-[80px] text-right">Actions</TableHead>
+              <TableHead className="w-[200px]">Participant</TableHead>
+              <TableHead className="w-[180px]">Contact</TableHead>
+              <TableHead>Accommodation</TableHead>
+              <TableHead>Transport</TableHead>
+              <TableHead>ETA</TableHead>
+              <TableHead>WhatsApp</TableHead>
+              <TableHead>Registration</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Attendance</TableHead>
+              <TableHead className="text-right w-[140px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedParticipants.map((p, idx) => (
-              <TableRow 
-                key={p.id} 
-                className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30 transition-colors ${selectedIds.includes(p.id) ? 'bg-blue-50 hover:bg-blue-100' : ''}`}
-              >
-                <TableCell className="w-[40px] sticky left-0 z-10 bg-inherit">
-                  <Checkbox 
-                    checked={selectedIds.includes(p.id)}
-                    onCheckedChange={(checked) => handleSelect(p.id, !!checked, false)}
-                  />
-                </TableCell>
+            {participants.map((p) => (
+              <TableRow key={p.id} className="hover:bg-gray-50/50">
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="font-semibold">{p.full_name}</span>
+                    {p.user_id && (
+                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" />
+                        Account Linked
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Tags and Source */}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {p.source && (
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-medium bg-gray-100 text-gray-600">
+                        Source: {p.source}
+                      </Badge>
+                    )}
+                    {p.tags && p.tags.map(tag => (
+                      <Badge key={tag} variant="outline" className="text-[9px] uppercase tracking-widest font-medium text-blue-600 border-blue-200">
+                        <Tag className="w-2.5 h-2.5 mr-1" /> {tag}
+                      </Badge>
+                    ))}
+                  </div>
 
-                <TableCell className="font-medium min-w-[200px] sticky left-[40px] z-10 bg-inherit border-r">
-                  <div className="flex flex-col">
-                    <InlineInput
-                      value={p.full_name}
-                      onSave={(v) => onUpdateParticipant(p.id, { full_name: v })}
-                      className="font-semibold text-gray-900 text-sm"
-                      placeholder="Name"
-                    />
-                    <div className="flex gap-2 text-[10px] text-gray-500">
-                      <InlineInput
-                        value={p.email}
-                        onSave={(v) => onUpdateParticipant(p.id, { email: v })}
-                        type="email"
-                        placeholder="email"
-                        className="text-[10px] w-1/2"
-                      />
-                      <InlineInput
-                        value={p.phone}
-                        onSave={(v) => onUpdateParticipant(p.id, { phone: v })}
-                        type="tel"
-                        placeholder="phone"
-                        className="text-[10px] w-1/2"
-                      />
+                  {/* Notes and Dates */}
+                  {p.notes && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                      <Info className="w-3 h-3" />
+                      <span className="truncate max-w-[150px]">{p.notes}</span>
                     </div>
+                  )}
+                  {p.created_at && (
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-400">
+                      <Calendar className="w-3 h-3" />
+                      {format(p.created_at, "MMM d, yyyy")}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {p.email && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <Mail className="w-3 h-3 text-gray-400" /> 
+                        <span className="truncate max-w-[120px]">{p.email}</span>
+                      </div>
+                    )}
+                    {p.phone && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <Phone className="w-3 h-3 text-gray-400" /> 
+                        {p.phone}
+                      </div>
+                    )}
+                    {p.dietary_requirements && (
+                      <div className="flex items-center gap-1 text-xs mt-2">
+                        <span className="text-gray-500 font-medium">Diet:</span>
+                        <Badge variant="outline" className="text-xs capitalize">{p.dietary_requirements}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                
+                {/* Logistics Columns */}
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs capitalize">
+                    <Home className="w-3 h-3 text-gray-400" />
+                    {formatLogistics(p.accommodation_plan)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs capitalize">
+                    <Car className="w-3 h-3 text-gray-400" />
+                    {formatLogistics(p.transportation_plan)}
                   </div>
                 </TableCell>
 
-                <TableCell className="align-top">
-                  <div className="flex flex-col gap-1">
-                    <InlineSelect
-                      value={p.registration_status || 'pending'}
-                      options={registrationOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { registration_status: v as RegistrationStatus })}
-                      label="Reg"
-                      allowQuickToggle={true}
-                    />
-                    <InlineSelect
-                      value={p.payment_status || 'unpaid'}
-                      options={paymentOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { payment_status: v as PaymentStatus })}
-                      label="Pay"
-                      allowQuickToggle={true}
-                    />
-                    <InlineSelect
-                      value={p.attendance_status || 'interested'}
-                      options={attendanceOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { attendance_status: v as AttendanceStatus })}
-                      label="Attend"
-                      allowQuickToggle={true}
-                    />
+                {/* ETA Column */}
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    {p.eta || <span className="text-gray-400 italic">N/A</span>}
                   </div>
                 </TableCell>
 
-                <TableCell className="align-top">
-                  <div className="flex flex-col gap-1 text-xs">
-                    <InlineSelect
-                      value={p.accommodation_plan || 'unknown'}
-                      options={accommodationOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { accommodation_plan: v })}
-                      label="Accom"
-                      className="justify-between"
-                    />
-                    <InlineSelect
-                      value={p.transportation_plan || 'unknown'}
-                      options={transportationOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { transportation_plan: v })}
-                      label="Trans"
-                      className="justify-between"
-                    />
-                    <InlineInput
-                      value={p.eta}
-                      onSave={(v) => onUpdateParticipant(p.id, { eta: v })}
-                      placeholder="ETA"
-                      className="text-xs"
-                    />
+                {/* WhatsApp Status Column */}
+                <TableCell>
+                  {getStatusBadge(p.whatsapp_status || 'not_invited', "whatsapp")}
+                </TableCell>
+
+                <TableCell>{getStatusBadge(p.registration_status, "registration")}</TableCell>
+                <TableCell>{getStatusBadge(p.payment_status, "payment")}</TableCell>
+                <TableCell>{getStatusBadge(p.attendance_status, "attendance")}</TableCell>
+                
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => handleEdit(p)}
+                      title="Edit all details"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
+                      onClick={() => toggleRegistrationStatus(p)}
+                      title="Quick toggle confirmed"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => handleDelete(p.id, p.full_name)}
+                      title="Delete participant"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                </TableCell>
-
-                <TableCell className="align-top">
-                  <div className="flex flex-col gap-1 text-xs">
-                    {/* REPLACED InlineInput with DietarySelect */}
-                    <DietarySelect
-                      value={p.dietary_requirements}
-                      onSave={(v) => onUpdateParticipant(p.id, { dietary_requirements: v })}
-                    />
-                    <InlineSelect
-                      value={p.whatsapp_status || 'not_invited'}
-                      options={whatsappOptions}
-                      onSave={(v) => onUpdateParticipant(p.id, { whatsapp_status: v })}
-                      label="WhatsApp"
-                      className="justify-between"
-                    />
-                  </div>
-                </TableCell>
-
-                <TableCell className="align-top">
-                  <InlineInput
-                    value={p.notes}
-                    onSave={(v) => onUpdateParticipant(p.id, { notes: v })}
-                    type="textarea"
-                    placeholder="Notes..."
-                    className="text-xs min-h-[40px]"
-                  />
-                  <InlineInput
-                    value={p.tags?.join(', ')}
-                    onSave={(v) => onUpdateParticipant(p.id, { tags: v.split(',').map((t: string) => t.trim()) })}
-                    placeholder="Tags"
-                    className="text-xs mt-1"
-                  />
-                </TableCell>
-
-                <TableCell className="text-right align-top">
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500"
-                    onClick={() => onDeleteParticipant(p.id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -377,13 +261,13 @@ export const ParticipantsTable: React.FC<ParticipantsTableProps> = ({
         </Table>
       </div>
 
-      {/* Bulk Toolbar */}
-      <BulkToolbar
-        selectedCount={selectedIds.length}
-        onClearSelection={() => setSelectedIds([])}
-        onBulkUpdate={handleBulkUpdate}
-        onBulkDelete={handleBulkDelete}
+      {/* Edit Dialog */}
+      <EditParticipantDialog
+        participant={editingParticipant}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSave={handleSave}
       />
-    </div>
+    </>
   );
 };
