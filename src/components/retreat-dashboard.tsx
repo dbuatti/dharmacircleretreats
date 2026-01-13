@@ -24,6 +24,7 @@ import { StatsCards } from "./StatsCards";
 import { ParticipantTable } from "./ParticipantTable";
 import { EditRetreatDialog } from "./EditRetreatDialog";
 import { BrandLogo } from "./BrandLogo";
+import { AddParticipantDialog } from "./AddParticipantDialog";
 import { Participant, Retreat, RegistrationStatus } from "@/types";
 
 interface RetreatDashboardProps {
@@ -41,6 +42,7 @@ interface RetreatDashboardProps {
 export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
   retreat,
   participants,
+  onAddParticipant,
   onUpdateParticipant,
   onDeleteParticipant,
   onUpdateRetreat,
@@ -136,6 +138,11 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+
+              <AddParticipantDialog 
+                onAdd={onAddParticipant} 
+                retreatId={retreat.id} 
+              />
             </div>
           </div>
           
@@ -148,7 +155,9 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
               />
               {filteredParticipants.length === 0 && (
                 <div className="py-12 text-center text-gray-400 font-serif italic">
-                  No participants found matching your criteria.
+                  {searchTerm || statusFilter !== "all" 
+                    ? "No participants match your filters." 
+                    : "No participants yet. Add one manually or share the registration link."}
                 </div>
               )}
             </CardContent>
