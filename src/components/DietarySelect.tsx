@@ -27,8 +27,18 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherText, setOtherText] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
   const otherInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Extract existing 'Other' text when component mounts/updates
+    const otherTag = getTagsArray(initialValue).find(t => t.startsWith('Other:'));
+    if (otherTag) {
+      setOtherText(otherTag.replace('Other: ', ''));
+    } else {
+      setOtherText('');
+    }
+    setCurrentValue(initialValue);
+  }, [initialValue]);
 
   // Parse initial value into array
   const getTagsArray = (val: string) => {
@@ -40,39 +50,6 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   // Check if specific tags are present
   const hasTag = (tag: string) => tags.some(t => t.toUpperCase() === tag.toUpperCase());
 
-  const toggleTag = (tag: string) => {
-    if (hasTag(tag)) {
-      // Remove tag
-      const newTags = tags.filter(t => t.toUpperCase() !== tag.toUpperCase());
-      updateValue(newTags);
-    } else {
-      // Add tag
-      updateValue([...tags, tag]);
-    }
-  };
-
-  const handleOtherSave = () => {
-    if (!otherText.trim()) {
-      setShowOtherInput(false);
-      return;
-    }
-    const newTag = `Other: ${otherText.trim()}`;
-    // Check if this specific "Other" tag already exists
-    if (!tags.some(t => t.startsWith('Other:'))) {
-      updateValue([...tags, newTag]);
-    } else {
-      // Replace existing "Other" tag
-      const newTags = tags.filter(t => !t.startsWith('Other:'));
-      updateValue([...newTags, newTag]);
-    }
-    setOtherText('');
-    setShowOtherInput(false);
-    // Keep focus on the input if they want to add another
-    if (otherInputRef.current) {
-      otherInputRef.current.focus();
-    }
-  };
-
   const updateValue = (newTags: string[]) => {
     const newValue = newTags.join(', ');
     setCurrentValue(newValue);
@@ -80,37 +57,82 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
     toast.success("Dietary updated");
   };
 
+  const toggleTag = (tag: string) => {
+    let newTags = getTagsArray(currentValue);
+    if (hasTag(tag)) {
+      // Remove tag
+      newTags = newTags.filter(t => t.toUpperCase() !== tag.toUpperCase());
+    } else {
+      // Add tag
+      newTags = [...newTags, tag];
+    }
+    updateValue(newTags);
+  };
+
+  const handleOtherSave = () => {
+    if (!otherText.trim()) {
+      // If text is cleared, remove the 'Other' tag
+      const newTags = tags.filter(t => !t.startsWith('Other:'));
+      updateValue(newTags);
+      setShowOtherInput(false);
+      return;
+    }
+    
+    const newTag = `Other: ${otherText.trim()}`;
+    
+    // Remove existing 'Other' tag and add the new one
+    const filteredTags = tags.filter(t => !t.startsWith('Other:'));
+    updateValue([...filteredTags, newTag]);
+    
+    // Keep focus on the input if they want to add another
+    if (otherInputRef.current) {
+      otherInputRef.current.focus();
+    }
+  };
+
   // Render the dropdown content
   const DropdownContent = () => (
     <SelectContent>
-      <SelectItem value="gf" onClick={() => toggleTag('GF')}>
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${hasTag('GF') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-          Gluten Free (GF)
-        </div>
-      </SelectItem>
-      <SelectItem value="df" onClick={() => toggleTag('DF')}>
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${hasTag('DF') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-          Dairy Free (DF)
-        </div>
-      </SelectItem>
-      <SelectItem value="vegan" onClick={() => toggleTag('Vegan')}>
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${hasTag('Vegan') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-          Vegan
-        </div>
-      </SelectItem>
-      <SelectItem value="other" onClick={() => {
-        setShowOtherInput(true);
-        // Focus the input after the DOM updates
-        setTimeout(() => otherInputRef.current?.focus(), 50);
-      }}>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-          Other (Custom)
-        </div>
-      </SelectItem>
+      {/* CRITICAL FIX: Use onMouseDown to prevent the Select component from closing on click inside the content area */}
+      <div onMouseDown={(e) => e.preventDefault()}>
+        
+        {/* GF */}
+        <SelectItem value="gf" onSelect={(e) => { e.preventDefault(); toggleTag('GF'); }}>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${hasTag('GF') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+            Gluten Free (GF)
+          </div>
+        </SelectItem>
+        
+        {/* DF */}
+        <SelectItem value="df" onSelect={(e) => { e.preventDefault(); toggleTag('DF'); }}>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${hasTag('DF') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+            Dairy Free (DF)
+          </div>
+        </SelectItem>
+        
+        {/* Vegan */}
+        <SelectItem value="vegan" onSelect={(e) => { e.preventDefault(); toggleTag('Vegan'); }}>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${hasTag('Vegan') ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+            Vegan
+          </div>
+        </SelectItem>
+        
+        {/* Other */}
+        <SelectItem value="other" onSelect={(e) => { 
+          e.preventDefault(); 
+          setShowOtherInput(true); 
+          // Focus the input after the DOM updates
+          setTimeout(() => otherInputRef.current?.focus(), 50);
+        }}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+            Other (Custom)
+          </div>
+        </SelectItem>
+      </div>
     </SelectContent>
   );
 
@@ -118,7 +140,9 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
     return (
       <div className="flex flex-col gap-2 p-2 bg-white border rounded-md shadow-sm">
         <Select 
+          // Force open when editing
           open={true} 
+          // When the select closes (e.g., user clicks outside), stop editing
           onOpenChange={(open) => {
             if (!open) {
               setIsEditing(false);
@@ -132,7 +156,7 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
           <DropdownContent />
         </Select>
         
-        {showOtherInput && (
+        {(showOtherInput || otherText) && (
           <div className="flex gap-1 animate-in fade-in slide-in-from-top-1">
             <Input 
               ref={otherInputRef}
@@ -145,13 +169,14 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
                   handleOtherSave();
                 }
               }}
+              onBlur={handleOtherSave}
               className="h-7 text-xs"
             />
             <button 
               onClick={handleOtherSave}
               className="px-2 bg-green-600 text-white rounded text-xs"
             >
-              Add
+              Save
             </button>
           </div>
         )}
