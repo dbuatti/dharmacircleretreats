@@ -30,35 +30,52 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   const otherInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Extract existing 'Other' text when component mounts/updates
-    const otherTag = getTagsArray(initialValue).find(t => t.startsWith('Other:'));
+    // Parse initial value and extract 'Other' text
+    const tagsArray = getTagsArray(initialValue);
+    const otherTag = tagsArray.find(t => t.startsWith('Other:'));
+    
     if (otherTag) {
       setOtherText(otherTag.replace('Other: ', ''));
+      // Ensure the main value string doesn't contain the 'Other' tag text in the state if we are managing it separately
+      setCurrentValue(tagsArray.filter(t => t !== otherTag).join(', '));
     } else {
       setOtherText('');
+      setCurrentValue(initialValue);
     }
-    setCurrentValue(initialValue);
   }, [initialValue]);
 
-  // Parse initial value into array
+  // Parse current value into array (excluding the 'Other' tag which is managed by otherText)
   const getTagsArray = (val: string) => {
-    return val.split(',').map(t => t.trim()).filter(t => t);
+    return val.split(',')
+      .map(t => t.trim())
+      .filter(t => t && !t.startsWith('Other:'));
   };
 
   const tags = getTagsArray(currentValue);
+  const allTags = otherText ? [...tags, `Other: ${otherText}`] : tags;
 
   // Check if specific tags are present
   const hasTag = (tag: string) => tags.some(t => t.toUpperCase() === tag.toUpperCase());
 
-  const updateValue = (newTags: string[]) => {
-    const newValue = newTags.join(', ');
-    setCurrentValue(newValue);
+  const updateValue = (newTags: string[], newOtherText: string = otherText) => {
+    const finalTags = [...newTags];
+    if (newOtherText.trim()) {
+      finalTags.push(`Other: ${newOtherText.trim()}`);
+    }
+    
+    const newValue = finalTags.join(', ');
+    
+    // Update local state for rendering chips
+    setCurrentValue(newTags.join(', '));
+    setOtherText(newOtherText);
+    
+    // Save to parent
     onSave(newValue);
     toast.success("Dietary updated");
   };
 
   const toggleTag = (tag: string) => {
-    let newTags = getTagsArray(currentValue);
+    let newTags = tags;
     if (hasTag(tag)) {
       // Remove tag
       newTags = newTags.filter(t => t.toUpperCase() !== tag.toUpperCase());
@@ -70,19 +87,17 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
   };
 
   const handleOtherSave = () => {
-    if (!otherText.trim()) {
+    const trimmedText = otherText.trim();
+    
+    if (!trimmedText) {
       // If text is cleared, remove the 'Other' tag
-      const newTags = tags.filter(t => !t.startsWith('Other:'));
-      updateValue(newTags);
+      updateValue(tags, '');
       setShowOtherInput(false);
       return;
     }
     
-    const newTag = `Other: ${otherText.trim()}`;
-    
-    // Remove existing 'Other' tag and add the new one
-    const filteredTags = tags.filter(t => !t.startsWith('Other:'));
-    updateValue([...filteredTags, newTag]);
+    // Update value with the new other text
+    updateValue(tags, trimmedText);
     
     // Keep focus on the input if they want to add another
     if (otherInputRef.current) {
@@ -147,8 +162,12 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
             if (!open) {
               setIsEditing(false);
               setShowOtherInput(false);
+              handleOtherSave(); // Ensure last input is saved on close
             }
           }}
+          // CRITICAL FIX: Prevent Select from trying to manage value change on its own
+          value={undefined} 
+          onValueChange={() => {}}
         >
           <SelectTrigger className="w-full border-0 bg-gray-50">
             <SelectValue placeholder="Select dietary..." />
@@ -183,12 +202,20 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
 
         {/* Current Selection Chips */}
         <div className="flex flex-wrap gap-1 mt-1">
-          {tags.map((tag, idx) => (
+          {allTags.map((tag, idx) => (
             <Badge 
               key={idx} 
               variant="secondary" 
               className="text-[10px] cursor-pointer hover:bg-red-100 hover:text-red-700"
-              onClick={() => toggleTag(tag)}
+              onClick={() => {
+                if (tag.startsWith('Other:')) {
+                  // Remove 'Other' tag
+                  updateValue(tags, '');
+                  setShowOtherInput(false);
+                } else {
+                  toggleTag(tag);
+                }
+              }}
               title="Click to remove"
             >
               {tag} ×
@@ -212,8 +239,8 @@ export const DietarySelect: React.FC<DietarySelectProps> = ({
       )}
       title="Click to edit dietary requirements"
     >
-      {tags.length > 0 ? (
-        tags.map((tag, idx) => (
+      {allTags.length > 0 ? (
+        allTags.map((tag, idx) => (
           <span key={idx} className="text-xs bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">
             {tag}
           </span>
