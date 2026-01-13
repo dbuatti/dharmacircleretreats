@@ -6,7 +6,8 @@ import {
   MessageCircle,
   LogOut,
   Settings,
-  Search
+  Search,
+  MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { StatsCards } from "./StatsCards";
 import { ParticipantTable } from "./ParticipantTable";
 import { EditRetreatDialog } from "./EditRetreatDialog";
+import { BrandLogo } from "./BrandLogo";
 
 export interface Participant {
   id: string;
@@ -57,8 +59,7 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
   onDeleteParticipant,
   onUpdateRetreat,
   onCopyWhatsApp,
-  onLogout,
-  userEmail
+  onLogout
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showEditRetreat, setShowEditRetreat] = useState(false);
@@ -69,57 +70,63 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{retreat.name}</h1>
-            <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-              <Calendar className="w-4 h-4" />
-              {retreat.dates} • {retreat.location}
-            </p>
+    <div className="min-h-screen bg-[#fcfcfc]">
+      <header className="bg-[#1e2a5e] text-white py-8 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-6">
+          <BrandLogo className="w-16 h-16 shadow-lg" />
+          <div className="space-y-2">
+            <h2 className="brand-script text-white/80 text-xl italic capitalize tracking-normal">Space for awakening</h2>
+            <h1 className="text-3xl md:text-4xl font-light tracking-widest uppercase">{retreat.name}</h1>
+            <div className="flex flex-wrap justify-center items-center gap-6 text-sm uppercase tracking-wider text-white/70 pt-2">
+              <span className="flex items-center gap-2"><Calendar className="w-4 h-4" /> {retreat.dates}</span>
+              <span className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {retreat.location}</span>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowEditRetreat(true)}>
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
+          
+          <div className="flex flex-wrap justify-center gap-3 pt-4">
+            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 uppercase tracking-widest text-[10px]" size="sm" onClick={() => setShowEditRetreat(true)}>
+              <Settings className="w-3 h-3 mr-2" />
+              Retreat Settings
             </Button>
-            <Button variant="outline" size="sm" onClick={onCopyWhatsApp}>
-              <MessageCircle className="w-4 h-4 mr-2" />
-              WhatsApp
+            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 uppercase tracking-widest text-[10px]" size="sm" onClick={onCopyWhatsApp}>
+              <MessageCircle className="w-3 h-3 mr-2" />
+              WhatsApp Group
             </Button>
-            <Button variant="ghost" size="sm" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
+            <Button variant="ghost" className="text-white/60 hover:text-white uppercase tracking-widest text-[10px]" size="sm" onClick={onLogout}>
+              <LogOut className="w-3 h-3 mr-2" />
               Logout
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-12 space-y-12">
         <StatsCards participants={participants} capacity={retreat.capacity} />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle>Participants</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+            <h3 className="text-xl font-light uppercase tracking-widest text-[#1e2a5e]">Manage Participants</h3>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input 
-                placeholder="Filter participants..." 
-                className="pl-8"
+                placeholder="Search by name or email..." 
+                className="pl-10 border-gray-200 focus:ring-[#1e2a5e]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          </CardHeader>
-          <CardContent>
-            <ParticipantTable 
-              participants={filteredParticipants} 
-              onUpdate={onUpdateParticipant}
-              onDelete={onDeleteParticipant}
-            />
-          </CardContent>
-        </Card>
+          </div>
+          
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <ParticipantTable 
+                participants={filteredParticipants} 
+                onUpdate={onUpdateParticipant}
+                onDelete={onDeleteParticipant}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       <EditRetreatDialog 
