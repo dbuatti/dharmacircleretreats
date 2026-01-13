@@ -6,11 +6,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SessionProvider, useSession } from "@/contexts/SessionContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import RetreatDetail from "./pages/RetreatDetail";
+import PublicRegistration from "./pages/PublicRegistration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useSession();
   
@@ -41,6 +42,15 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/retreat/:id" 
+              element={
+                <ProtectedRoute>
+                  <RetreatDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/register/:id" element={<PublicRegistration />} />
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
