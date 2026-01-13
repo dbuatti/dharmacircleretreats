@@ -5,7 +5,7 @@ export const BrandLogo = ({ className = "w-12 h-12" }: { className?: string }) =
     <div className={`relative flex items-center justify-center rounded-full bg-[#1e2a5e] p-1 ${className}`}>
       {/* Using the uploaded logo image */}
       <img 
-        src="/images/pasted-image-2026-01-13T22-45-06-966Z.png" 
+        src="/images/dharma_logo_2b.webp" 
         alt="Dharma Circle Logo" 
         className="w-full h-full rounded-full object-cover"
         onError={(e) => {
