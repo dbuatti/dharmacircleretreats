@@ -185,9 +185,13 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                       </div>
                     )}
                     {p.dietary_requirements && (
-                      <div className="flex items-center gap-1 text-xs mt-2">
-                        <span className="text-gray-500 font-medium">Diet:</span>
-                        <Badge variant="outline" className="text-xs capitalize">{p.dietary_requirements}</Badge>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <span className="text-gray-500 font-medium text-xs">Diet:</span>
+                        {p.dietary_requirements.split(',').map((req, index) => (
+                          <Badge key={index} variant="outline" className="text-[10px] uppercase tracking-widest font-medium text-purple-600 border-purple-200">
+                            {req.trim()}
+                          </Badge>
+                        ))}
                       </div>
                     )}
                   </div>

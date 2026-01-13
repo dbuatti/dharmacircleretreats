@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Participant, RegistrationStatus, PaymentStatus, AttendanceStatus } from "@/types";
 import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users, Home, Car, Clock, MessageCircle } from "lucide-react";
+import { DietaryMultiSelect } from "./DietaryMultiSelect";
 
 interface EditParticipantDialogProps {
   participant: Participant | null;
@@ -344,11 +345,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
               <Label htmlFor="edit-dietary" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
                 <Utensils className="w-3 h-3" /> Dietary Requirements
               </Label>
-              <Input 
-                id="edit-dietary"
-                placeholder="Vegan, Gluten-free, etc."
+              <DietaryMultiSelect
                 value={formData.dietary_requirements}
-                onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
+                onChange={(value) => setFormData({...formData, dietary_requirements: value})}
               />
             </div>
 

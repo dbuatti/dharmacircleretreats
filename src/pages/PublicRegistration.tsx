@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Calendar, MapPin, Loader2, AlertCircle, User as UserIcon, Car, Home } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useSession } from "@/contexts/SessionContext";
+import { DietaryMultiSelect } from "@/components/DietaryMultiSelect";
 
 const PublicRegistration = () => {
   const { id } = useParams<{ id: string }>();
@@ -133,7 +134,7 @@ const PublicRegistration = () => {
       const insertData = {
         full_name: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
-        dietary_requirements: formData.dietary_requirements.trim() || null,
+        dietary_requirements: formData.dietary_requirements.trim() || null, // Use the string output from MultiSelect
         notes: formData.notes.trim() || null, // Notes are now just notes
         accommodation_plan: formData.accommodation_plan, // Dedicated column
         transportation_plan: formData.transportation_plan, // Dedicated column
@@ -399,12 +400,9 @@ const PublicRegistration = () => {
                     <Label htmlFor="dietary" className="text-[10px] uppercase tracking-widest text-gray-500">
                       Dietary Requirements
                     </Label>
-                    <Input 
-                      id="dietary" 
-                      placeholder="Vegan, Gluten-free, etc."
-                      className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors placeholder:text-gray-300 placeholder:italic"
+                    <DietaryMultiSelect
                       value={formData.dietary_requirements}
-                      onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
+                      onChange={(value) => setFormData({...formData, dietary_requirements: value})}
                       disabled={submitting}
                     />
                   </div>
