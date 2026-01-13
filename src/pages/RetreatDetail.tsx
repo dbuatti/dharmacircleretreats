@@ -11,7 +11,16 @@ import { ChevronLeft } from "lucide-react";
 
 const RetreatDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { retreat, participants, loading, addParticipant, updateParticipant, sendEmails, copyWhatsApp } = useRetreatData(id);
+  const { 
+    retreat, 
+    participants, 
+    loading, 
+    addParticipant, 
+    updateParticipant, 
+    deleteParticipant,
+    updateRetreat,
+    copyWhatsApp 
+  } = useRetreatData(id);
   const { session } = useSession();
   const navigate = useNavigate();
 
@@ -43,7 +52,8 @@ const RetreatDetail = () => {
         participants={participants}
         onAddParticipant={addParticipant}
         onUpdateParticipant={updateParticipant}
-        onSendEmails={sendEmails as any}
+        onDeleteParticipant={deleteParticipant}
+        onUpdateRetreat={updateRetreat}
         onCopyWhatsApp={copyWhatsApp}
         onLogout={handleLogout}
         userEmail={session?.user?.email}

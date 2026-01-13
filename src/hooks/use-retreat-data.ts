@@ -10,147 +10,88 @@ export function useRetreatData(retreatId: string | undefined) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!session || !retreatId) {
-      setLoading(false);
-      return;
-    }
+  const fetchData = useCallback(async () => {
+    if (!session || !retreatId) return;
+    setLoading(true);
+    try {
+      const { data: retreatData, error: retreatError } = await supabase
+        .from('retreats')
+        .select('*')
+        .eq('id', retreatId)
+        .single();
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch retreat details
-        const { data: retreatData, error: retreatError } = await supabase
-          .from('retreats')
-          .select('*')
-          .eq('id', retreatId)
-          .single();
-
-        if (retreatError) {
-          toast.error("Retreat not found");
-          return;
-        }
-        setRetreat(retreatData);
-
-        // Fetch participants
-        const { data: partData, error: partError } = await supabase
-          .from('participants')
-          .select('*')
-          .eq('retreat_id', retreatId)
-          .order('created_at', { ascending: false });
-
-        if (partError) {
-          console.error('Error fetching participants:', partError);
-          setParticipants([]);
-        } else if (partData) {
-          const formattedData = partData.map(p => ({
-            ...p,
-            created_at: new Date(p.created_at),
-            last_contacted: p.last_contacted ? new Date(p.last_contacted) : undefined
-          }));
-          setParticipants(formattedData);
-        }
-      } catch (error) {
-        console.error('Unexpected error:', error);
-      } finally {
-        setLoading(false);
+      if (retreatError) {
+        toast.error("Retreat not found");
+        return;
       }
-    };
+      setRetreat(retreatData);
 
+      const { data: partData, error: partError } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('retreat_id', retreatId)
+        .order('created_at', { ascending: false });
+
+      if (partError) {
+        setParticipants([]);
+      } else if (partData) {
+        setParticipants(partData.map(p => ({
+          ...p,
+          created_at: new Date(p.created_at),
+          last_contacted: p.last_contacted ? new Date(p.last_contacted) : undefined
+        })));
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [session, retreatId]);
+
+  useEffect(() => {
     fetchData();
 
-    // Set up real-time subscription
     const channel = supabase
       .channel(`retreat-${retreatId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'participants', filter: `retreat_id=eq.${retreatId}` },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newParticipant = { ...payload.new, created_at: new Date(payload.new.created_at) } as Participant;
-            setParticipants(prev => [newParticipant, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedParticipant = { ...payload.new, created_at: new Date(payload.new.created_at) } as Participant;
-            setParticipants(prev => prev.map(p => p.id === payload.new.id ? updatedParticipant : p));
-          } else if (payload.eventType === 'DELETE') {
-            setParticipants(prev => prev.filter(p => p.id !== payload.old.id));
-          }
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `retreat_id=eq.${retreatId}` }, 
+      () => fetchData())
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, retreatId]);
+  }, [fetchData, retreatId]);
 
-  const addParticipant = useCallback(async (participantData: Partial<Participant>) => {
-    if (!session || !retreatId) {
-      toast.error("Missing session or retreat ID");
-      return;
+  const updateRetreat = async (updates: Partial<Retreat>) => {
+    const { error } = await supabase.from('retreats').update(updates).eq('id', retreatId);
+    if (error) toast.error("Update failed");
+    else {
+      toast.success("Retreat updated");
+      fetchData();
     }
+  };
 
-    const participant = {
-      ...participantData,
+  const addParticipant = async (data: Partial<Participant>) => {
+    const { error } = await supabase.from('participants').insert([{
+      ...data,
       retreat_id: retreatId,
-      user_id: session.user.id,
-      added_by: session.user.email || "Unknown",
-    };
+      user_id: session?.user.id,
+      added_by: session?.user.email
+    }]);
+    if (error) toast.error("Failed to add participant");
+    else toast.success("Participant added");
+  };
 
-    try {
-      const { error } = await supabase
-        .from('participants')
-        .insert([participant]);
+  const updateParticipant = async (id: string, updates: Partial<Participant>) => {
+    const { error } = await supabase.from('participants').update(updates).eq('id', id);
+    if (error) toast.error("Update failed");
+  };
 
-      if (error) {
-        toast.error(`Failed to add: ${error.message}`);
-        return;
-      }
-
-      toast.success(`${participantData.full_name} added to retreat`);
-    } catch (error) {
-      toast.error("Unexpected error adding participant");
-    }
-  }, [retreatId, session]);
-
-  const updateParticipant = useCallback(async (id: string, updates: Partial<Participant>) => {
-    try {
-      const { error } = await supabase
-        .from('participants')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) {
-        toast.error(`Failed to update: ${error.message}`);
-        return;
-      }
-
-      toast.success("Participant updated");
-    } catch (error) {
-      toast.error("Unexpected error updating participant");
-    }
-  }, []);
-
-  const sendEmails = useCallback(async (participantIds: string[], template: string) => {
-    const updates = participantIds.map(id => 
-      supabase
-        .from('participants')
-        .update({ last_contacted: new Date().toISOString() })
-        .eq('id', id)
-    );
-
-    await Promise.all(updates);
-    toast.success(`Sent emails to ${participantIds.length} participants`);
-  }, []);
-
-  const copyWhatsApp = useCallback(() => {
-    if (retreat?.whatsapp_link) {
-      navigator.clipboard.writeText(retreat.whatsapp_link);
-      toast.success("WhatsApp link copied");
-    } else {
-      toast.error("No WhatsApp link set");
-    }
-  }, [retreat]);
+  const deleteParticipant = async (id: string) => {
+    const { error } = await supabase.from('participants').delete().eq('id', id);
+    if (error) toast.error("Delete failed");
+    else toast.success("Participant removed");
+  };
 
   return {
     retreat,
@@ -158,7 +99,13 @@ export function useRetreatData(retreatId: string | undefined) {
     loading,
     addParticipant,
     updateParticipant,
-    sendEmails,
-    copyWhatsApp
+    deleteParticipant,
+    updateRetreat,
+    copyWhatsApp: () => {
+      if (retreat?.whatsapp_link) {
+        navigator.clipboard.writeText(retreat.whatsapp_link);
+        toast.success("WhatsApp link copied");
+      } else toast.error("No link set");
+    }
   };
 }
