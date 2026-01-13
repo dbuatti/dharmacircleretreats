@@ -5,7 +5,6 @@ import { useRetreatData } from "@/hooks/use-retreat-data";
 import { Toaster } from "@/components/ui/toaster";
 import { useSession } from "@/contexts/SessionContext";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -34,14 +33,6 @@ const Index = () => {
   return (
     <div>
       <Toaster />
-      <div className="bg-white border-b px-4 py-2 flex justify-between items-center">
-        <div className="text-sm text-gray-600">
-          Signed in as: <span className="font-medium">{session?.user?.email}</span>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          Sign Out
-        </Button>
-      </div>
       <RetreatDashboard
         retreat={retreat}
         participants={participants}
@@ -49,6 +40,8 @@ const Index = () => {
         onUpdateParticipant={updateParticipant}
         onSendEmails={sendEmails}
         onCopyWhatsApp={copyWhatsApp}
+        onLogout={handleLogout}
+        userEmail={session?.user?.email}
       />
     </div>
   );

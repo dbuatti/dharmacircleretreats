@@ -22,7 +22,10 @@ export function useRetreatData() {
 
   // Fetch participants from Supabase
   useEffect(() => {
-    if (!session) return;
+    if (!session) {
+      setLoading(false);
+      return;
+    }
 
     const fetchParticipants = async () => {
       try {
@@ -140,9 +143,11 @@ export function useRetreatData() {
         { event: '*', schema: 'public', table: 'participants', filter: `retreat_id=eq.retreat-1` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setParticipants(prev => [{ ...payload.new, created_at: new Date(payload.new.created_at) }, ...prev]);
+            const newParticipant = { ...payload.new, created_at: new Date(payload.new.created_at) } as Participant;
+            setParticipants(prev => [newParticipant, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
-            setParticipants(prev => prev.map(p => p.id === payload.new.id ? { ...payload.new, created_at: new Date(payload.new.created_at) } : p));
+            const updatedParticipant = { ...payload.new, created_at: new Date(payload.new.created_at) } as Participant;
+            setParticipants(prev => prev.map(p => p.id === payload.new.id ? updatedParticipant : p));
           } else if (payload.eventType === 'DELETE') {
             setParticipants(prev => prev.filter(p => p.id !== payload.old.id));
           }
@@ -173,7 +178,7 @@ export function useRetreatData() {
       return;
     }
 
-    const participant: Partial<Participant> = {
+    const participant: any = {
       ...participantData,
       retreat_id: "retreat-1",
       added_by: session.user.email || "Unknown",

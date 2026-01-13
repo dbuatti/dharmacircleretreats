@@ -13,7 +13,8 @@ import {
   Clock,
   Utensils,
   MessageCircle,
-  FileText
+  FileText,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +76,8 @@ interface RetreatDashboardProps {
   onUpdateParticipant: (id: string, updates: Partial<Participant>) => void;
   onSendEmails: (participantIds: string[], template: "registration" | "welcome" | "final") => void;
   onCopyWhatsApp: () => void;
+  onLogout: () => void;
+  userEmail?: string;
 }
 
 export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
@@ -83,7 +86,9 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
   onAddParticipant,
   onUpdateParticipant,
   onSendEmails,
-  onCopyWhatsApp
+  onCopyWhatsApp,
+  onLogout,
+  userEmail
 }) => {
   const { toast } = useToast();
   
@@ -249,8 +254,15 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Copy WhatsApp Link
               </Button>
+              <Button variant="outline" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
+          {userEmail && (
+            <p className="text-xs text-gray-500 mt-2">Signed in as: {userEmail}</p>
+          )}
         </div>
       </header>
 
