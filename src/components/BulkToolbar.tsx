@@ -156,7 +156,8 @@ export const BulkToolbar: React.FC<BulkToolbarProps> = ({
                 className="h-8 w-48 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 onBlur={(e) => {
                   const tags = e.target.value.split(',').map(t => t.trim()).filter(t => t);
-                  onBulkUpdate({ dietary_requirements: tags.join(', ') });
+                  // Join into a string for the bulk update
+                  onBulkUpdate({ dietary_requirements: tags.join(', ') }, 'append');
                 }}
               />
             </div>
