@@ -123,41 +123,44 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                 <div className="flex flex-col space-y-1 w-full max-w-md">
                   {/* Name (Inline Editable) */}
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#1e2a5e]" />
+                    <User className="w-5 h-5 text-[#1e2a5e]" />
                     <InlineInput
                       value={p.full_name}
                       onSave={(v) => handleUpdate(p.id, 'full_name', v)}
-                      className="text-lg font-bold text-[#1e2a5e] uppercase tracking-wider"
+                      className="text-xl font-bold text-[#1e2a5e] uppercase tracking-wider"
                       placeholder="Participant Name"
                     />
                   </div>
 
-                  {/* Email (Inline Editable) */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Mail className="w-3 h-3 text-gray-400" />
-                    <InlineInput
-                      value={p.email}
-                      onSave={(v) => handleUpdate(p.id, 'email', v)}
-                      type="email"
-                      placeholder="Add Email"
-                      className="text-sm"
-                    />
-                  </div>
+                  {/* Contact Info Block */}
+                  <div className="pl-7 space-y-1">
+                    {/* Email (Inline Editable) */}
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Mail className="w-3.5 h-3.5 text-gray-400" />
+                      <InlineInput
+                        value={p.email}
+                        onSave={(v) => handleUpdate(p.id, 'email', v)}
+                        type="email"
+                        placeholder="Add Email"
+                        className="text-sm"
+                      />
+                    </div>
 
-                  {/* Phone (Inline Editable) */}
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="w-3 h-3 text-gray-400" />
-                    <InlineInput
-                      value={p.phone}
-                      onSave={(v) => handleUpdate(p.id, 'phone', v)}
-                      type="tel"
-                      placeholder="Add Phone"
-                      className="text-sm"
-                    />
+                    {/* Phone (Inline Editable) */}
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone className="w-3.5 h-3.5 text-gray-400" />
+                      <InlineInput
+                        value={p.phone}
+                        onSave={(v) => handleUpdate(p.id, 'phone', v)}
+                        type="tel"
+                        placeholder="Add Phone"
+                        className="text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions (Hidden until hover) */}
                 <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button 
                     size="icon" 
@@ -183,29 +186,33 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
               {/* Row 2: Statuses and Logistics (4-Column Grid) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 
-                {/* Column 1: Statuses */}
-                <div className="space-y-3">
+                {/* Column 1: Statuses (Vertical Stack) */}
+                <div className="space-y-2">
                   <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Status</h4>
-                  <InlineSelect
-                    value={p.attendance_status}
-                    options={attendanceOptions}
-                    onSave={(v) => handleUpdate(p.id, 'attendance_status', v)}
-                  />
-                  <InlineSelect
-                    value={p.registration_status}
-                    options={registrationOptions}
-                    onSave={(v) => handleUpdate(p.id, 'registration_status', v)}
-                  />
-                  <InlineSelect
-                    value={p.payment_status}
-                    options={paymentOptions}
-                    onSave={(v) => handleUpdate(p.id, 'payment_status', v)}
-                  />
+                  <div className="space-y-2">
+                    <InlineSelect
+                      value={p.attendance_status}
+                      options={attendanceOptions}
+                      onSave={(v) => handleUpdate(p.id, 'attendance_status', v)}
+                    />
+                    <InlineSelect
+                      value={p.registration_status}
+                      options={registrationOptions}
+                      onSave={(v) => handleUpdate(p.id, 'registration_status', v)}
+                    />
+                    <InlineSelect
+                      value={p.payment_status}
+                      options={paymentOptions}
+                      onSave={(v) => handleUpdate(p.id, 'payment_status', v)}
+                    />
+                  </div>
                 </div>
 
-                {/* Column 2: Logistics */}
-                <div className="space-y-3">
+                {/* Column 2: Logistics (Vertical Stack with Icons as Labels) */}
+                <div className="space-y-2">
                   <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Logistics</h4>
+                  
+                  {/* Accommodation */}
                   <div className="flex items-center gap-2">
                     <Home className="w-4 h-4 text-gray-400" />
                     <InlineSelect
@@ -215,6 +222,8 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                       placeholder="Accommodation Plan"
                     />
                   </div>
+                  
+                  {/* Transportation */}
                   <div className="flex items-center gap-2">
                     <Car className="w-4 h-4 text-gray-400" />
                     <InlineSelect
@@ -224,30 +233,32 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                       placeholder="Transportation Plan"
                     />
                   </div>
+                  
+                  {/* ETA */}
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
                     <InlineInput
                       value={p.eta}
                       onSave={(v) => handleUpdate(p.id, 'eta', v)}
                       placeholder="Add ETA (e.g., Fri 5pm)"
-                      className="text-xs"
+                      className="text-sm"
                     />
                   </div>
                 </div>
 
-                {/* Column 3: Dietary & WhatsApp */}
-                <div className="space-y-3">
+                {/* Column 3: Health & Comms */}
+                <div className="space-y-2">
                   <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Health & Comms</h4>
-                  <div className="flex flex-col space-y-1">
+                  <div className="space-y-1">
                     <span className="text-xs font-medium text-gray-600">Dietary:</span>
                     <InlineInput
                       value={p.dietary_requirements}
                       onSave={(v) => handleUpdate(p.id, 'dietary_requirements', v)}
                       placeholder="None specified"
-                      className="text-xs"
+                      className="text-sm"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pt-2">
                     <MessageCircle className="w-4 h-4 text-gray-400" />
                     <InlineSelect
                       value={p.whatsapp_status || 'not_invited'}
@@ -259,7 +270,7 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                 </div>
 
                 {/* Column 4: Notes & Metadata */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Notes & Tags</h4>
                   <div className="space-y-1">
                     <span className="text-xs font-medium text-gray-600">Notes:</span>
@@ -268,30 +279,29 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                       onSave={(v) => handleUpdate(p.id, 'notes', v)}
                       type="textarea"
                       placeholder="Add notes..."
-                      className="text-xs"
+                      className="text-sm"
                     />
                   </div>
                   
-                  {/* Tags (Editable as comma-separated string) */}
                   <div className="space-y-1">
                     <span className="text-xs font-medium text-gray-600">Tags:</span>
                     <InlineInput
                       value={p.tags?.join(', ') || ''}
                       onSave={(v) => handleUpdate(p.id, 'tags', v)}
                       placeholder="Add tags (comma separated)"
-                      className="text-xs"
+                      className="text-sm"
                     />
                   </div>
                   
-                  {/* Metadata */}
-                  <div className="flex flex-wrap gap-2 pt-2">
+                  {/* Metadata (Consolidated) */}
+                  <div className="flex flex-wrap gap-3 pt-4 text-[10px] uppercase tracking-widest text-gray-400 font-medium">
                     {p.source && (
-                      <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-medium bg-gray-100 text-gray-600">
+                      <div className="flex items-center gap-1">
                         Source: {p.source}
-                      </Badge>
+                      </div>
                     )}
                     {p.created_at && (
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                      <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {format(p.created_at, "MMM d, yyyy")}
                       </div>
