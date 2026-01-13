@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User as UserIcon, Settings } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, ShieldCheck } from "lucide-react";
 import { useSession } from "@/contexts/SessionContext";
 
 interface UserMenuProps {
@@ -19,7 +19,7 @@ interface UserMenuProps {
 }
 
 export const UserMenu: React.FC<UserMenuProps> = ({ onLogout }) => {
-  const { session, user, signOut } = useSession();
+  const { session, user, signOut, isAdmin } = useSession();
 
   if (!user) return null;
 
@@ -44,7 +44,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onLogout }) => {
       <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
+            <p className="text-sm font-medium leading-none flex items-center gap-2">
+              {displayName}
+              {isAdmin && (
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                  Admin
+                </span>
+              )}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -59,6 +66,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({ onLogout }) => {
           <Settings className="mr-2 h-4 w-4" />
           Settings
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem onClick={() => console.log('Admin panel clicked')}>
+            <ShieldCheck className="mr-2 h-4 w-4 text-green-600" />
+            Admin Panel
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-red-600">
           <LogOut className="mr-2 h-4 w-4" />
