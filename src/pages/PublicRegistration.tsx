@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CheckCircle2, Calendar, MapPin, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, Loader2, AlertCircle, LogIn, User as UserIcon } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { useSession } from "@/contexts/SessionContext";
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 const PublicRegistration = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { session } = useSession();
   const [retreat, setRetreat] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -26,6 +32,22 @@ const PublicRegistration = () => {
     dietary_requirements: "",
     notes: ""
   });
+
+  // Pre-fill form if user is logged in
+  useEffect(() => {
+    if (session?.user) {
+      const email = session.user.email || "";
+      const fullName = session.user.user_metadata?.full_name || 
+                      session.user.user_metadata?.name || 
+                      email.split('@')[0];
+      
+      setFormData(prev => ({
+        ...prev,
+        email: email,
+        full_name: prev.full_name || fullName
+      }));
+    }
+  }, [session]);
 
   useEffect(() => {
     const fetchRetreat = async () => {
@@ -57,6 +79,20 @@ const PublicRegistration = () => {
     fetchRetreat();
   }, [id]);
 
+  const handleLoginWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/register/${id}`
+      }
+    });
+
+    if (error) {
+      toast.error("Login failed");
+      console.error("Login error:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -67,7 +103,6 @@ const PublicRegistration = () => {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("Please enter a valid email address.");
@@ -77,20 +112,21 @@ const PublicRegistration = () => {
 
     setSubmitting(true);
     try {
-      // Prepare data with proper types
       const insertData = {
         full_name: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || null,
         dietary_requirements: formData.dietary_requirements.trim() || null,
         notes: formData.notes.trim() || null,
-        retreat_id: id, // This will be handled as UUID by the database
+        retreat_id: id,
         source: "public",
         registration_status: "received",
         payment_status: "not_paid",
         attendance_status: "interested",
-        user_id: retreat?.user_id || null, // Link to organizer
-        tags: ["public-registration"]
+        user_id: retreat?.user_id || null,
+        tags: ["public-registration"],
+        // Link to user if logged in
+        ...(session?.user?.id && { user_id: session.user.id })
       };
 
       const { error } = await supabase
@@ -99,7 +135,6 @@ const PublicRegistration = () => {
 
       if (error) {
         console.error("Submission error details:", error);
-        // Check for specific constraint violations
         if (error.code === "23505") {
           setError("This email is already registered for this retreat.");
           toast.error("Already registered");
@@ -124,6 +159,19 @@ const PublicRegistration = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Logged out");
+    // Reset form
+    setFormData({
+      full_name: "",
+      email: "",
+      phone: "",
+      dietary_requirements: "",
+      notes: ""
+    });
   };
 
   if (loading) {
@@ -183,6 +231,7 @@ const PublicRegistration = () => {
   return (
     <div className="min-h-screen bg-[#fcfcfc] py-16 px-4">
       <div className="max-w-2xl mx-auto space-y-12">
+        {/* Header */}
         <div className="text-center space-y-6">
           <div className="flex justify-center mb-8">
             <BrandLogo className="w-20 h-20" />
@@ -197,11 +246,84 @@ const PublicRegistration = () => {
           </div>
         </div>
 
+        {/* Login/Logout Section */}
+        {session ? (
+          <div className="bg-green-50 border border-green-200 rounded-none p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <UserIcon className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-800">
+                Logged in as <strong>{session.user?.email}</strong>
+              </span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-green-300 text-green-700 hover:bg-green-100 rounded-none text-[10px] uppercase tracking-widest"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </div>
+        ) : showLogin ? (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-none p-4 text-center">
+              <p className="text-sm text-blue-800 font-medium mb-3">Sign in to save your information</p>
+              <p className="text-xs text-blue-600 font-serif italic mb-4">
+                Login makes future registrations faster and lets you manage your bookings
+              </p>
+              <Button 
+                onClick={handleLoginWithGoogle}
+                className="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-none h-11"
+              >
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Sign in with Google
+              </Button>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-blue-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-blue-50 px-2 text-blue-600">OR</span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600">
+                You can also fill out the form below without logging in
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center">
+            <Button 
+              variant="outline"
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 rounded-none h-11 px-8"
+              onClick={() => setShowLogin(true)}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign in with Google (Optional)
+            </Button>
+            <p className="text-xs text-gray-500 mt-2 font-serif italic">
+              Login is optional - you can submit the form without signing in
+            </p>
+          </div>
+        )}
+
+        {/* Registration Form */}
         <Card className="border-none shadow-sm p-4 md:p-8">
           <CardHeader className="text-center space-y-4">
-            <CardTitle className="text-2xl font-light uppercase tracking-widest text-[#1e2a5e]">Register</CardTitle>
+            <CardTitle className="text-2xl font-light uppercase tracking-widest text-[#1e2a5e]">
+              {session ? "Complete Your Registration" : "Register"}
+            </CardTitle>
             <div className="h-px w-12 bg-gray-200 mx-auto" />
-            <CardDescription className="font-serif italic text-base">Please fill in your details to join our sangha for this retreat.</CardDescription>
+            <CardDescription className="font-serif italic text-base">
+              {session 
+                ? "Review your details below and submit to complete registration" 
+                : "Please fill in your details to join our sangha for this retreat."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -227,7 +349,7 @@ const PublicRegistration = () => {
                       className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      disabled={submitting}
+                      disabled={submitting || !!session} // Can't change if logged in
                     />
                   </div>
                   <div className="space-y-2">

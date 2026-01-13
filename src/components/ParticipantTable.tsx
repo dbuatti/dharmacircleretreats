@@ -8,7 +8,8 @@ import {
   Trash2,
   User,
   Calendar,
-  Info
+  Info,
+  UserCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,12 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-400" />
                   <span className="font-semibold">{p.full_name}</span>
+                  {p.user_id && (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      Account Linked
+                    </span>
+                  )}
                 </div>
                 {p.notes && (
                   <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
