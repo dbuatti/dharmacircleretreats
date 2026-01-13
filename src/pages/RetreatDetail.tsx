@@ -56,7 +56,6 @@ const RetreatDetail = () => {
         onUpdateRetreat={updateRetreat}
         onCopyWhatsApp={copyWhatsApp}
         onLogout={handleLogout}
-        userEmail={session?.user?.email}
       />
     </div>
   );

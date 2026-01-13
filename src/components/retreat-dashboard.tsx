@@ -1,15 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Calendar, 
-  MessageCircle,
-  LogOut,
-  Settings,
-  MapPin,
-} from "lucide-react";
+import { Calendar, MessageCircle, LogOut, Settings, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { StatsCards } from "./StatsCards";
 import { EditRetreatDialog } from "./EditRetreatDialog";
 import { BrandLogo } from "./BrandLogo";
@@ -25,7 +18,6 @@ interface RetreatDashboardProps {
   onUpdateRetreat: (updates: Partial<Retreat>) => void;
   onCopyWhatsApp: () => void;
   onLogout: () => void;
-  userEmail?: string;
 }
 
 export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
@@ -42,6 +34,7 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-[#fcfcfc]">
+      {/* Header */}
       <header className="bg-[#1e2a5e] text-white py-12 px-4">
         <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-6">
           <BrandLogo className="w-16 h-16 shadow-lg" />

@@ -1,25 +1,11 @@
 "use client";
 
 import React from "react";
-import { 
-  Mail, 
-  Phone, 
-  CheckCircle2, 
-  Trash2,
-  User,
-  Calendar,
-  Info,
-  Home,
-  Car,
-  Clock,
-  MessageCircle
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Participant } from "@/types";
-import { format } from "date-fns";
 import { InlineInput } from "./InlineInput";
 import { InlineSelect } from "./InlineSelect";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { 
   registrationOptions, 
@@ -36,247 +22,182 @@ interface ParticipantCardViewProps {
   onDelete: (id: string) => void;
 }
 
-// --- Component ---
-
 export const ParticipantCardView: React.FC<ParticipantCardViewProps> = ({ 
   participants, 
   onUpdate,
   onDelete 
 }) => {
-  
+
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+    if (confirm(`Delete ${name}?`)) {
       onDelete(id);
+      toast.error("Participant deleted");
     }
   };
 
-  const handleUpdate = (id: string, field: keyof Participant, value: string) => {
-    // Convert 'unknown' back to null for database storage if it's a logistics field
-    const finalValue = (field === 'accommodation_plan' || field === 'transportation_plan') && value === 'unknown' ? null : value;
-    
-    // Handle tags separately as they are an array
-    if (field === 'tags') {
-      const tagsArray = value.split(',').map(t => t.trim()).filter(t => t);
-      onUpdate(id, { tags: tagsArray });
-    } else {
-      onUpdate(id, { [field]: finalValue });
-    }
-  };
-
-  const handleToggleConfirmed = (p: Participant) => {
-    const newStatus = p.attendance_status === "confirmed" ? "interested" : "confirmed";
-    onUpdate(p.id, { attendance_status: newStatus });
-    toast.info(`${p.full_name} status set to ${newStatus.toUpperCase()}.`);
+  const handleUpdate = (id: string, field: keyof Participant, value: any) => {
+    onUpdate(id, { [field]: value });
   };
 
   return (
-    <div className="space-y-4">
-      {participants.length === 0 ? (
-        <div className="py-12 text-center text-gray-400 font-serif italic">
-          No participants match your filters.
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {participants.map((p) => (
-            <div 
-              key={p.id} 
-              className="bg-white p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 rounded-lg group"
-            >
-              {/* Row 1: Name, Contact, Quick Actions */}
-              <div className="flex justify-between items-start border-b pb-4 mb-4">
-                <div className="flex flex-col space-y-1 w-full max-w-md">
-                  {/* Name (Inline Editable) */}
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-[#1e2a5e]" />
-                    <InlineInput
-                      value={p.full_name}
-                      onSave={(v) => handleUpdate(p.id, 'full_name', v)}
-                      className="text-xl font-bold text-[#1e2a5e] uppercase tracking-wider"
-                      placeholder="Participant Name"
-                    />
-                  </div>
-
-                  {/* Contact Info Block */}
-                  <div className="pl-7 space-y-1">
-                    {/* Email (Inline Editable) */}
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Mail className="w-3.5 h-3.5 text-gray-400" />
-                      <InlineInput
-                        value={p.email}
-                        onSave={(v) => handleUpdate(p.id, 'email', v)}
-                        type="email"
-                        placeholder="Add Email"
-                        className="text-sm"
-                      />
-                    </div>
-
-                    {/* Phone (Inline Editable) */}
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Phone className="w-3.5 h-3.5 text-gray-400" />
-                      <InlineInput
-                        value={p.phone}
-                        onSave={(v) => handleUpdate(p.id, 'phone', v)}
-                        type="tel"
-                        placeholder="Add Phone"
-                        className="text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions (Hidden until hover) */}
-                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
-                    onClick={() => handleToggleConfirmed(p)}
-                    title={p.attendance_status === "confirmed" ? "Mark as Interested" : "Quick Confirm Attendance"}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost"
-                    className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    onClick={() => handleDelete(p.id, p.full_name)}
-                    title="Delete participant"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {participants.map((p) => (
+        <div 
+          key={p.id} 
+          className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group"
+        >
+          {/* Header: Name & Actions */}
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
+            <div className="flex-1">
+              <InlineInput
+                value={p.full_name}
+                onSave={(v) => handleUpdate(p.id, 'full_name', v)}
+                className="text-lg font-bold text-gray-900 uppercase tracking-wide"
+                placeholder="Full Name"
+              />
+              <div className="flex gap-3 mt-1 text-sm text-gray-500">
+                <InlineInput
+                  value={p.email}
+                  onSave={(v) => handleUpdate(p.id, 'email', v)}
+                  type="email"
+                  placeholder="email@example.com"
+                  className="text-sm text-gray-600"
+                />
+                <span className="text-gray-300">|</span>
+                <InlineInput
+                  value={p.phone}
+                  onSave={(v) => handleUpdate(p.id, 'phone', v)}
+                  type="tel"
+                  placeholder="+61 4..."
+                  className="text-sm text-gray-600"
+                />
               </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 hover:bg-red-50"
+              onClick={() => handleDelete(p.id, p.full_name)}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
 
-              {/* Row 2: Statuses and Logistics (4-Column Grid) */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                
-                {/* Column 1: Statuses (Vertical Stack) */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Status</h4>
-                  <div className="space-y-2">
-                    <InlineSelect
-                      value={p.attendance_status}
-                      options={attendanceOptions}
-                      onSave={(v) => handleUpdate(p.id, 'attendance_status', v)}
-                    />
-                    <InlineSelect
-                      value={p.registration_status}
-                      options={registrationOptions}
-                      onSave={(v) => handleUpdate(p.id, 'registration_status', v)}
-                    />
-                    <InlineSelect
-                      value={p.payment_status}
-                      options={paymentOptions}
-                      onSave={(v) => handleUpdate(p.id, 'payment_status', v)}
-                    />
-                  </div>
+          {/* Status Row: Labeled Pills */}
+          <div className="px-6 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2 items-center">
+            <InlineSelect
+              value={p.registration_status || 'pending'}
+              options={registrationOptions}
+              onSave={(v) => handleUpdate(p.id, 'registration_status', v)}
+              label="Reg"
+            />
+            <InlineSelect
+              value={p.payment_status || 'unpaid'}
+              options={paymentOptions}
+              onSave={(v) => handleUpdate(p.id, 'payment_status', v)}
+              label="Pay"
+            />
+            <InlineSelect
+              value={p.attendance_status || 'interested'}
+              options={attendanceOptions}
+              onSave={(v) => handleUpdate(p.id, 'attendance_status', v)}
+              label="Attend"
+            />
+          </div>
+
+          {/* Logistics Grid */}
+          <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Logistics Column */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Logistics</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Accom:</span>
+                  <InlineSelect
+                    value={p.accommodation_plan || 'unknown'}
+                    options={accommodationOptions}
+                    onSave={(v) => handleUpdate(p.id, 'accommodation_plan', v)}
+                    label="Accom"
+                    className="text-xs"
+                  />
                 </div>
-
-                {/* Column 2: Logistics (Vertical Stack with Icons as Labels) */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Logistics</h4>
-                  
-                  {/* Accommodation */}
-                  <div className="flex items-center gap-2">
-                    <Home className="w-4 h-4 text-gray-400" />
-                    <InlineSelect
-                      value={p.accommodation_plan || 'unknown'}
-                      options={accommodationOptions}
-                      onSave={(v) => handleUpdate(p.id, 'accommodation_plan', v)}
-                      placeholder="Accommodation Plan"
-                    />
-                  </div>
-                  
-                  {/* Transportation */}
-                  <div className="flex items-center gap-2">
-                    <Car className="w-4 h-4 text-gray-400" />
-                    <InlineSelect
-                      value={p.transportation_plan || 'unknown'}
-                      options={transportationOptions}
-                      onSave={(v) => handleUpdate(p.id, 'transportation_plan', v)}
-                      placeholder="Transportation Plan"
-                    />
-                  </div>
-                  
-                  {/* ETA */}
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <InlineInput
-                      value={p.eta}
-                      onSave={(v) => handleUpdate(p.id, 'eta', v)}
-                      placeholder="Add ETA (e.g., Fri 5pm)"
-                      className="text-sm"
-                    />
-                  </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Trans:</span>
+                  <InlineSelect
+                    value={p.transportation_plan || 'unknown'}
+                    options={transportationOptions}
+                    onSave={(v) => handleUpdate(p.id, 'transportation_plan', v)}
+                    label="Trans"
+                    className="text-xs"
+                  />
                 </div>
-
-                {/* Column 3: Health & Comms */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Health & Comms</h4>
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-600">Dietary:</span>
-                    <InlineInput
-                      value={p.dietary_requirements}
-                      onSave={(v) => handleUpdate(p.id, 'dietary_requirements', v)}
-                      placeholder="None specified"
-                      className="text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <MessageCircle className="w-4 h-4 text-gray-400" />
-                    <InlineSelect
-                      value={p.whatsapp_status || 'not_invited'}
-                      options={whatsappOptions}
-                      onSave={(v) => handleUpdate(p.id, 'whatsapp_status', v)}
-                      placeholder="WhatsApp Status"
-                    />
-                  </div>
-                </div>
-
-                {/* Column 4: Notes & Metadata */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-medium">Notes & Tags</h4>
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-600">Notes:</span>
-                    <InlineInput
-                      value={p.notes}
-                      onSave={(v) => handleUpdate(p.id, 'notes', v)}
-                      type="textarea"
-                      placeholder="Add notes..."
-                      className="text-sm"
-                    />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-gray-600">Tags:</span>
-                    <InlineInput
-                      value={p.tags?.join(', ') || ''}
-                      onSave={(v) => handleUpdate(p.id, 'tags', v)}
-                      placeholder="Add tags (comma separated)"
-                      className="text-sm"
-                    />
-                  </div>
-                  
-                  {/* Metadata (Consolidated) */}
-                  <div className="flex flex-wrap gap-3 pt-4 text-[10px] uppercase tracking-widest text-gray-400 font-medium">
-                    {p.source && (
-                      <div className="flex items-center gap-1">
-                        Source: {p.source}
-                      </div>
-                    )}
-                    {p.created_at && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {format(p.created_at, "MMM d, yyyy")}
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">ETA:</span>
+                  <InlineInput
+                    value={p.eta}
+                    onSave={(v) => handleUpdate(p.id, 'eta', v)}
+                    placeholder="+ Add"
+                    className="text-xs font-mono"
+                  />
                 </div>
               </div>
             </div>
-          ))}
+
+            {/* Health & Comms Column */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Health & Comms</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Diet:</span>
+                  <InlineInput
+                    value={p.dietary_requirements}
+                    onSave={(v) => handleUpdate(p.id, 'dietary_requirements', v)}
+                    placeholder="None"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">WhatsApp:</span>
+                  <InlineSelect
+                    value={p.whatsapp_status || 'not_invited'}
+                    options={whatsappOptions}
+                    onSave={(v) => handleUpdate(p.id, 'whatsapp_status', v)}
+                    label="Chat"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes & Tags Column */}
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Notes & Tags</h4>
+              <div className="space-y-2">
+                <InlineInput
+                  value={p.notes}
+                  onSave={(v) => handleUpdate(p.id, 'notes', v)}
+                  type="textarea"
+                  placeholder="Add notes..."
+                  className="text-xs min-h-[60px]"
+                />
+                <InlineInput
+                  value={p.tags?.join(', ')}
+                  onSave={(v) => handleUpdate(p.id, 'tags', v.split(',').map((t: string) => t.trim()))}
+                  placeholder="Tags (comma sep)"
+                  className="text-xs bg-gray-50 rounded px-2 py-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-2 bg-gray-50 border-t border-gray-100 text-[10px] text-gray-400 flex justify-between uppercase tracking-wider">
+            <span>Source: {p.source || 'Manual'}</span>
+            <span>{new Date(p.created_at).toLocaleDateString()}</span>
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
