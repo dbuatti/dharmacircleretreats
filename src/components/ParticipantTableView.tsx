@@ -6,52 +6,26 @@ import { InlineInput } from "./InlineInput";
 import { InlineSelect } from "./InlineSelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUpDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Trash2, CheckCircle2 } from "lucide-react";
+import { 
+  registrationOptions, 
+  paymentOptions, 
+  attendanceOptions, 
+  whatsappOptions, 
+  accommodationOptions, 
+  transportationOptions 
+} from "@/utils/participant-options";
 
 interface ParticipantTableViewProps {
   participants: Participant[];
   onUpdate: (id: string, updates: Partial<Participant>) => void;
   onDelete: (id: string) => void;
   selectedIds: string[];
-  onSelect: (id: string, selected: boolean) => void;
+  onSelect: (id: string, selected: boolean, shiftKey: boolean) => void;
   onSelectAll: (selected: boolean) => void;
 }
-
-// --- Status Options (Same as Card View) ---
-const statusOptions = {
-  registration: [
-    { value: "confirmed", label: "Confirmed", color: "green" },
-    { value: "pending", label: "Pending", color: "yellow" },
-    { value: "cancelled", label: "Cancelled", color: "red" },
-  ],
-  payment: [
-    { value: "paid", label: "Paid", color: "green" },
-    { value: "pending", label: "Pending", color: "yellow" },
-    { value: "unpaid", label: "Unpaid", color: "red" },
-  ],
-  attendance: [
-    { value: "confirmed", label: "Confirmed", color: "green" },
-    { value: "interested", label: "Interested", color: "yellow" },
-    { value: "withdrawn", label: "Withdrawn", color: "red" },
-  ],
-  logistics: [
-    { value: "camping", label: "Camping", color: "blue" },
-    { value: "offsite", label: "Offsite", color: "purple" },
-    { value: "courthouse", label: "Courthouse", color: "indigo" },
-  ],
-  transport: [
-    { value: "driving", label: "Driving", color: "green" },
-    { value: "carpool", label: "Carpool OK", color: "yellow" },
-    { value: "need-lift", label: "Needs Lift", color: "red" },
-  ],
-  whatsapp: [
-    { value: "joined", label: "Joined", color: "green" },
-    { value: "invited", label: "Invited", color: "blue" },
-    { value: "not_invited", label: "Not Invited", color: "gray" },
-  ],
-};
 
 export const ParticipantTableView: React.FC<ParticipantTableViewProps> = ({
   participants,
@@ -97,82 +71,94 @@ export const ParticipantTableView: React.FC<ParticipantTableViewProps> = ({
 
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden bg-white">
-      <Table className="min-w-[1000px]">
+      <Table className="min-w-[1200px]">
         <TableHeader className="bg-gray-50 sticky top-0 z-10">
           <TableRow>
-            <TableHead className="w-[40px] bg-gray-50">
+            <TableHead className="w-[40px] sticky left-0 bg-gray-50 z-20">
               <Checkbox 
                 checked={isAllSelected}
                 onCheckedChange={(checked) => onSelectAll(!!checked)}
               />
             </TableHead>
             <TableHead 
-              className="cursor-pointer hover:bg-gray-100"
+              className="cursor-pointer hover:bg-gray-100 min-w-[200px] sticky left-[40px] bg-gray-50 z-20 border-r"
               onClick={() => handleSort('full_name')}
             >
-              <div className="flex items-center gap-1">Name <ArrowUpDown className="w-3 h-3" /></div>
+              <div className="flex items-center gap-1 font-semibold">Name</div>
             </TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Logistics</TableHead>
-            <TableHead>Health</TableHead>
-            <TableHead className="w-[150px]">Notes</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="min-w-[150px] cursor-pointer hover:bg-gray-100" onClick={() => handleSort('attendance_status')}>Status</TableHead>
+            <TableHead className="min-w-[120px]">Logistics</TableHead>
+            <TableHead className="min-w-[120px]">Health</TableHead>
+            <TableHead className="min-w-[150px]">Notes & Tags</TableHead>
+            <TableHead className="w-[80px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedParticipants.map((p, idx) => (
             <TableRow 
               key={p.id} 
-              className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30 transition-colors`}
+              className={`group ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/30 transition-colors ${selectedIds.includes(p.id) ? 'bg-blue-50 hover:bg-blue-100' : ''}`}
             >
-              <TableCell>
+              {/* Checkbox - Sticky Left */}
+              <TableCell className="w-[40px] sticky left-0 z-10 bg-inherit">
                 <Checkbox 
                   checked={selectedIds.includes(p.id)}
-                  onCheckedChange={(checked) => onSelect(p.id, !!checked)}
+                  // FIX: Assert 'checked' parameter to boolean
+                  onCheckedChange={(checked) => onSelect(p.id, !!checked, false)}
                 />
               </TableCell>
-              
-              {/* Name & Contact */}
-              <TableCell className="font-medium">
-                <InlineInput
-                  value={p.full_name}
-                  onSave={(v) => handleUpdate(p.id, 'full_name', v)}
-                  className="font-semibold text-gray-900"
-                />
-                <div className="text-xs text-gray-500 mt-0.5">
+
+              {/* Name - Sticky Left */}
+              <TableCell className="font-medium min-w-[200px] sticky left-[40px] z-10 bg-inherit border-r">
+                <div className="flex flex-col">
                   <InlineInput
-                    value={p.email}
-                    onSave={(v) => handleUpdate(p.id, 'email', v)}
-                    type="email"
-                    placeholder="email"
-                    className="text-xs"
+                    value={p.full_name}
+                    onSave={(v) => handleUpdate(p.id, 'full_name', v)}
+                    className="font-semibold text-gray-900 text-sm"
+                    placeholder="Name"
                   />
+                  <div className="flex gap-2 text-[10px] text-gray-500">
+                    <InlineInput
+                      value={p.email}
+                      onSave={(v) => handleUpdate(p.id, 'email', v)}
+                      type="email"
+                      placeholder="email"
+                      className="text-[10px] w-1/2"
+                    />
+                    <InlineInput
+                      value={p.phone}
+                      onSave={(v) => handleUpdate(p.id, 'phone', v)}
+                      type="tel"
+                      placeholder="phone"
+                      className="text-[10px] w-1/2"
+                    />
+                  </div>
                 </div>
               </TableCell>
 
-              {/* Status (Stacked Pills) */}
+              {/* Status Cluster */}
               <TableCell className="align-top">
                 <div className="flex flex-col gap-1">
                   <InlineSelect
                     value={p.registration_status || 'pending'}
-                    options={statusOptions.registration}
+                    options={registrationOptions}
                     onSave={(v) => handleUpdate(p.id, 'registration_status', v)}
                     label="Reg"
-                    className="text-[10px]"
+                    allowQuickToggle={true}
                   />
                   <InlineSelect
                     value={p.payment_status || 'unpaid'}
-                    options={statusOptions.payment}
+                    options={paymentOptions}
                     onSave={(v) => handleUpdate(p.id, 'payment_status', v)}
                     label="Pay"
-                    className="text-[10px]"
+                    allowQuickToggle={true}
                   />
                   <InlineSelect
                     value={p.attendance_status || 'interested'}
-                    options={statusOptions.attendance}
+                    options={attendanceOptions}
                     onSave={(v) => handleUpdate(p.id, 'attendance_status', v)}
                     label="Attend"
-                    className="text-[10px]"
+                    allowQuickToggle={true}
                   />
                 </div>
               </TableCell>
@@ -180,60 +166,45 @@ export const ParticipantTableView: React.FC<ParticipantTableViewProps> = ({
               {/* Logistics */}
               <TableCell className="align-top">
                 <div className="flex flex-col gap-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 w-8">Accom:</span>
-                    <InlineSelect
-                      value={p.accommodation_plan || 'camping'}
-                      options={statusOptions.logistics}
-                      onSave={(v) => handleUpdate(p.id, 'accommodation_plan', v)}
-                      label=""
-                      className="text-[10px]"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 w-8">Trans:</span>
-                    <InlineSelect
-                      value={p.transportation_plan || 'driving'}
-                      options={statusOptions.transport}
-                      onSave={(v) => handleUpdate(p.id, 'transportation_plan', v)}
-                      label=""
-                      className="text-[10px]"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 w-8">ETA:</span>
-                    <InlineInput
-                      value={p.eta}
-                      onSave={(v) => handleUpdate(p.id, 'eta', v)}
-                      placeholder="..."
-                      className="text-[10px] font-mono"
-                    />
-                  </div>
+                  <InlineSelect
+                    value={p.accommodation_plan || 'unknown'}
+                    options={accommodationOptions}
+                    onSave={(v) => handleUpdate(p.id, 'accommodation_plan', v)}
+                    label="Accom"
+                    className="justify-between"
+                  />
+                  <InlineSelect
+                    value={p.transportation_plan || 'unknown'}
+                    options={transportationOptions}
+                    onSave={(v) => handleUpdate(p.id, 'transportation_plan', v)}
+                    label="Trans"
+                    className="justify-between"
+                  />
+                  <InlineInput
+                    value={p.eta}
+                    onSave={(v) => handleUpdate(p.id, 'eta', v)}
+                    placeholder="ETA"
+                    className="text-xs"
+                  />
                 </div>
               </TableCell>
 
               {/* Health */}
               <TableCell className="align-top">
                 <div className="flex flex-col gap-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 w-8">Diet:</span>
-                    <InlineInput
-                      value={p.dietary_requirements}
-                      onSave={(v) => handleUpdate(p.id, 'dietary_requirements', v)}
-                      placeholder="None"
-                      className="text-[10px]"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 w-8">Chat:</span>
-                    <InlineSelect
-                      value={p.whatsapp_status || 'not_invited'}
-                      options={statusOptions.whatsapp}
-                      onSave={(v) => handleUpdate(p.id, 'whatsapp_status', v)}
-                      label=""
-                      className="text-[10px]"
-                    />
-                  </div>
+                  <InlineInput
+                    value={p.dietary_requirements}
+                    onSave={(v) => handleUpdate(p.id, 'dietary_requirements', v)}
+                    placeholder="Diet"
+                    className="text-xs"
+                  />
+                  <InlineSelect
+                    value={p.whatsapp_status || 'not_invited'}
+                    options={whatsappOptions}
+                    onSave={(v) => handleUpdate(p.id, 'whatsapp_status', v)}
+                    label="WhatsApp"
+                    className="justify-between"
+                  />
                 </div>
               </TableCell>
 
@@ -243,14 +214,14 @@ export const ParticipantTableView: React.FC<ParticipantTableViewProps> = ({
                   value={p.notes}
                   onSave={(v) => handleUpdate(p.id, 'notes', v)}
                   type="textarea"
-                  placeholder="..."
-                  className="text-[10px] min-h-[60px]"
+                  placeholder="Notes..."
+                  className="text-xs min-h-[40px]"
                 />
                 <InlineInput
                   value={p.tags?.join(', ')}
                   onSave={(v) => handleUpdate(p.id, 'tags', v.split(',').map((t: string) => t.trim()))}
-                  placeholder="tags"
-                  className="text-[10px] mt-1 bg-gray-100 rounded px-1"
+                  placeholder="Tags"
+                  className="text-xs mt-1"
                 />
               </TableCell>
 

@@ -8,13 +8,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface Option {
   value: string;
   label: string;
-  color: string; // Tailwind color class (e.g., 'green', 'red')
+  color: string;
   icon?: string;
 }
 
@@ -22,8 +21,9 @@ interface InlineSelectProps {
   value: string | undefined;
   options: Option[];
   onSave: (newValue: string) => void;
-  label: string; // For accessibility and context
+  label: string;
   className?: string;
+  allowQuickToggle?: boolean;
 }
 
 export const InlineSelect: React.FC<InlineSelectProps> = ({
@@ -32,9 +32,10 @@ export const InlineSelect: React.FC<InlineSelectProps> = ({
   onSave,
   label,
   className,
+  allowQuickToggle = true,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(initialValue);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setCurrentValue(initialValue);
@@ -46,53 +47,56 @@ export const InlineSelect: React.FC<InlineSelectProps> = ({
     setCurrentValue(newValue);
     onSave(newValue);
     toast.success(`${label} updated`, { duration: 1500 });
-    setIsEditing(false);
   };
 
-  if (isEditing) {
-    return (
-      <Select 
-        value={currentValue} 
-        onValueChange={handleValueChange}
-        open={true}
-        onOpenChange={(open) => !open && setIsEditing(false)}
-      >
-        <SelectTrigger className="h-8 w-full border-blue-500 ring-2 ring-blue-500/20 rounded-md">
-          <SelectValue placeholder="Select..." />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map(opt => (
-            <SelectItem key={opt.value} value={opt.value}>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full bg-${opt.color}-500`}></span>
-                {opt.label}
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
+  const handleClick = () => {
+    if (!allowQuickToggle) {
+      setIsOpen(true);
+      return;
+    }
+    const currentIndex = options.findIndex(opt => opt.value === currentValue);
+    const nextIndex = (currentIndex + 1) % options.length;
+    const nextValue = options[nextIndex].value;
+    handleValueChange(nextValue);
+  };
 
   return (
-    <div 
-      onClick={() => setIsEditing(true)}
-      className={cn(
-        "cursor-pointer inline-block transition-all hover:opacity-80",
-        className
-      )}
-      title={`Click to edit ${label}`}
+    <Select 
+      value={currentValue} 
+      onValueChange={handleValueChange}
+      open={isOpen}
+      onOpenChange={setIsOpen}
     >
-      <Badge 
-        variant="outline" 
+      <SelectTrigger 
         className={cn(
-          "capitalize font-medium px-2 py-0.5 rounded-md text-[10px] border-0",
-          `bg-${selectedOption.color}-50 text-${selectedOption.color}-700`
+          "h-7 w-full border-transparent bg-transparent px-1.5 py-0.5 rounded transition-all duration-200",
+          "hover:bg-gray-50 hover:border-gray-200 hover:px-2",
+          "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:bg-white",
+          "data-[state=open]:bg-white data-[state=open]:border-blue-500",
+          "text-xs font-medium capitalize",
+          className
         )}
+        onClick={(e) => {
+          if (allowQuickToggle) {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        // FIX: Removed 'showIcon' prop as it does not exist on SelectTrigger
       >
-        {label}: {selectedOption.label}
-      </Badge>
-    </div>
+        <SelectValue placeholder="Select..." />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(opt => (
+          <SelectItem key={opt.value} value={opt.value} className="capitalize">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full bg-${opt.color}-500`}></span>
+              {opt.label}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
 

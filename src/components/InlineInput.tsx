@@ -3,8 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Check, X } from 'lucide-react';
 
 interface InlineInputProps {
   value: string | undefined;
@@ -12,6 +12,7 @@ interface InlineInputProps {
   placeholder?: string;
   type?: 'text' | 'email' | 'tel' | 'textarea';
   className?: string;
+  label?: string;
 }
 
 export const InlineInput: React.FC<InlineInputProps> = ({
@@ -20,98 +21,104 @@ export const InlineInput: React.FC<InlineInputProps> = ({
   placeholder = 'Click to edit',
   type = 'text',
   className,
+  label,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(initialValue);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
-  // Sync external value changes
   useEffect(() => {
     setCurrentValue(initialValue);
+    setIsDirty(false);
   }, [initialValue]);
 
-  // Focus input when editing starts
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
-    const trimmedValue = currentValue.trim();
-    if (trimmedValue !== initialValue) {
-      onSave(trimmedValue);
-      toast.success('Saved', { duration: 1500 });
-    }
-    setIsEditing(false);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setCurrentValue(e.target.value);
+    setIsDirty(true);
   };
 
-  const handleCancel = () => {
-    setCurrentValue(initialValue);
-    setIsEditing(false);
+  const handleSave = () => {
+    if (!isDirty) return;
+    
+    const trimmedValue = currentValue.trim();
+    setIsDirty(false);
+    onSave(trimmedValue);
+    
+    toast.success('Saved', { 
+      duration: 1500,
+      className: 'bg-green-50 text-green-800 border border-green-200'
+    });
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    handleSave();
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && type !== 'textarea') {
       e.preventDefault();
       handleSave();
-    } else if (e.key === 'Escape') {
-      handleCancel();
+      // Move to next field
+      const next = inputRef.current?.closest('td')?.nextElementSibling?.querySelector('input, textarea');
+      if (next) {
+        // FIX: Assert the type to HTMLInputElement or HTMLTextAreaElement
+        (next as HTMLInputElement | HTMLTextAreaElement).focus();
+      }
+    }
+    if (e.key === 'Escape') {
+      setCurrentValue(initialValue);
+      setIsDirty(false);
+      inputRef.current?.blur();
+    }
+    if (e.key === 'Tab') {
+      handleSave();
     }
   };
 
-  if (isEditing) {
-    const InputComponent = type === 'textarea' ? Textarea : Input;
-    return (
-      <div className="relative flex items-center w-full group">
-        <InputComponent
-          ref={inputRef as any}
-          value={currentValue}
-          onChange={(e) => setCurrentValue(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={cn(
-            "h-8 text-sm p-2 border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md shadow-sm",
-            type === 'textarea' ? 'min-h-[60px] resize-none' : 'h-9',
-            className
-          )}
-        />
-        <div className="absolute right-2 flex gap-1">
-          <Check className="w-3 h-3 text-green-500 cursor-pointer" onClick={handleSave} />
-          <X className="w-3 h-3 text-red-500 cursor-pointer" onClick={handleCancel} />
-        </div>
-      </div>
-    );
-  }
+  const InputComponent = type === 'textarea' ? Textarea : Input;
 
   return (
-    <div
-      className={cn(
-        "group relative cursor-text rounded-md transition-all",
-        "hover:bg-gray-50 hover:ring-1 hover:ring-gray-200 hover:px-2 hover:-mx-2",
-        "border-b border-transparent hover:border-dashed hover:border-gray-300",
-        "flex items-center min-h-[2rem]",
-        className
-      )}
-      onClick={() => setIsEditing(true)}
-      title="Click to edit"
-    >
-      <span className={cn(
-        "truncate",
-        !currentValue && "text-gray-400 italic"
-      )}>
-        {currentValue || placeholder}
-      </span>
-      {/* Pencil icon on hover */}
-      <span className="ml-2 opacity-0 group-hover:opacity-100 text-gray-400 text-xs">
-        ✏️
-      </span>
+    <div className="relative group">
+      <InputComponent
+        ref={inputRef as any}
+        value={currentValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        aria-label={label}
+        className={cn(
+          "h-8 p-1.5 border-transparent bg-transparent rounded transition-all duration-200",
+          "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:bg-white",
+          "hover:bg-gray-50 hover:border-gray-200 hover:px-2",
+          isFocused && "bg-white shadow-sm border-blue-500",
+          !currentValue && "text-gray-400 italic",
+          className
+        )}
+      />
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+        {isDirty && isFocused ? (
+          <div className="flex gap-1">
+            <Check className="w-3 h-3 text-green-500" />
+            <span className="text-[10px] text-green-600 font-medium">Saving...</span>
+          </div>
+        ) : (
+          <span className="opacity-0 group-hover:opacity-100 text-gray-400 text-[10px]">
+            ✏️
+          </span>
+        )}
+      </div>
     </div>
   );
 };
 
-// Helper for Tailwind classes
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
 }

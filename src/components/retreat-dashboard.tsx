@@ -34,7 +34,6 @@ export const RetreatDashboard: React.FC<RetreatDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-[#fcfcfc]">
-      {/* Header */}
       <header className="bg-[#1e2a5e] text-white py-12 px-4">
         <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-6">
           <BrandLogo className="w-16 h-16 shadow-lg" />
