@@ -3,6 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Participant } from "@/types";
+import { Users, CheckCircle2, CreditCard, AlertCircle } from "lucide-react";
 
 interface StatsCardsProps {
   participants: Participant[];
@@ -18,51 +19,56 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ participants, capacity }
     remaining: capacity - participants.filter(p => p.attendance_status === "confirmed").length
   };
 
+  const cards = [
+    {
+      title: "Total Participants",
+      value: stats.total,
+      icon: Users,
+      color: "text-gray-700",
+      subtitle: `Capacity: ${capacity}`
+    },
+    {
+      title: "Confirmed",
+      value: stats.confirmed,
+      icon: CheckCircle2,
+      color: "text-green-600",
+      subtitle: stats.remaining > 0 ? `${stats.remaining} spots left` : "At capacity"
+    },
+    {
+      title: "Paid in Full",
+      value: stats.paid,
+      icon: CreditCard,
+      color: "text-blue-600",
+      subtitle: stats.confirmed > 0 ? `${Math.round((stats.paid / stats.confirmed) * 100)}% of confirmed` : "No confirmed yet"
+    },
+    {
+      title: "Needs Info",
+      value: stats.incomplete,
+      icon: AlertCircle,
+      color: "text-orange-600",
+      subtitle: "Action required"
+    }
+  ];
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Total Participants</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">{stats.total}</div>
-          <div className="text-xs text-gray-500 mt-1">Capacity: {capacity}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Confirmed</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-green-600">{stats.confirmed}</div>
-          <div className="text-xs text-gray-500 mt-1">
-            {stats.remaining > 0 ? `${stats.remaining} spots left` : "At capacity"}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Paid in Full</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-blue-600">{stats.paid}</div>
-          <div className="text-xs text-gray-500 mt-1">
-            {Math.round((stats.paid / stats.confirmed) * 100 || 0)}% of confirmed
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Needs Info</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-orange-600">{stats.incomplete}</div>
-          <div className="text-xs text-gray-500 mt-1">Action required</div>
-        </CardContent>
-      </Card>
+      {cards.map((card, index) => {
+        const Icon = card.icon;
+        return (
+          <Card key={index} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wider">
+                {card.title}
+              </CardTitle>
+              <Icon className={`h-4 w-4 ${card.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${card.color}`}>{card.value}</div>
+              <div className="text-xs text-gray-500 mt-1">{card.subtitle}</div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

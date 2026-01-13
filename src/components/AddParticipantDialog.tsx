@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, User, Mail, Phone, Utensils, FileText } from "lucide-react";
 import { Participant } from "@/types";
 
 interface AddParticipantDialogProps {
@@ -24,9 +24,19 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
     notes: ""
   });
 
+  const resetForm = () => {
+    setFormData({
+      full_name: "",
+      email: "",
+      phone: "",
+      dietary_requirements: "",
+      notes: ""
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name) return;
+    if (!formData.full_name.trim()) return;
 
     onAdd({
       ...formData,
@@ -37,14 +47,12 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
       tags: ["manual-entry"]
     });
 
-    // Reset form and close dialog
-    setFormData({
-      full_name: "",
-      email: "",
-      phone: "",
-      dietary_requirements: "",
-      notes: ""
-    });
+    resetForm();
+    setOpen(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
     setOpen(false);
   };
 
@@ -56,65 +64,91 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
           Add Participant
         </Button>
       </DialogTrigger>
-      <DialogContent className="rounded-none border-none">
-        <DialogHeader className="space-y-4">
+      <DialogContent className="sm:max-w-[500px] rounded-none">
+        <DialogHeader className="space-y-3">
           <DialogTitle className="text-xl uppercase tracking-widest text-[#1e2a5e]">Add Participant</DialogTitle>
-          <DialogDescription className="font-serif italic">Enter details for a new participant.</DialogDescription>
+          <DialogDescription className="font-serif italic">
+            Create a new participant record manually. Required fields are marked with *.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-[10px] uppercase tracking-widest text-gray-500">Full Name *</Label>
-            <Input 
-              id="name" 
-              required
-              className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
-              value={formData.full_name}
-              onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-[10px] uppercase tracking-widest text-gray-500">Email</Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-5 py-4">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                <User className="w-3 h-3" /> Full Name <span className="text-red-500">*</span>
+              </Label>
               <Input 
-                id="email" 
-                type="email"
+                id="name" 
+                required
+                placeholder="John Doe"
                 className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                value={formData.full_name}
+                onChange={(e) => setFormData({...formData, full_name: e.target.value})}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-[10px] uppercase tracking-widest text-gray-500">Phone</Label>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="email" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                  <Mail className="w-3 h-3" /> Email
+                </Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  placeholder="john@example.com"
+                  className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="phone" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                  <Phone className="w-3 h-3" /> Phone
+                </Label>
+                <Input 
+                  id="phone"
+                  placeholder="+1 234 567 890"
+                  className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="dietary" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                <Utensils className="w-3 h-3" /> Dietary Requirements
+              </Label>
               <Input 
-                id="phone"
+                id="dietary"
+                placeholder="Vegan, Gluten-free, etc."
                 className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                value={formData.dietary_requirements}
+                onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="dietary" className="text-[10px] uppercase tracking-widest text-gray-500">Dietary Requirements</Label>
-            <Input 
-              id="dietary"
-              className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
-              value={formData.dietary_requirements}
-              onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-[10px] uppercase tracking-widest text-gray-500">Notes</Label>
-            <Textarea 
-              id="notes"
-              className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 min-h-[80px] resize-none"
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-            />
+
+            <div className="space-y-1">
+              <Label htmlFor="notes" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                <FileText className="w-3 h-3" /> Notes
+              </Label>
+              <Textarea 
+                id="notes"
+                placeholder="Any special considerations..."
+                className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 min-h-[80px] resize-none"
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              />
+            </div>
           </div>
         </form>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} className="bg-[#1e2a5e] hover:bg-[#2b3a7a]">Add Participant</Button>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSubmit} className="bg-[#1e2a5e] hover:bg-[#2b3a7a]" disabled={!formData.full_name.trim()}>
+            Add Participant
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
