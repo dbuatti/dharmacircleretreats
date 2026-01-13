@@ -80,6 +80,13 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
     return <Badge className={`${styles[typeKey][statusKey] || 'bg-gray-100 text-gray-600'} capitalize`}>{displayText}</Badge>;
   };
 
+  const formatLogistics = (value: string | undefined) => {
+    if (!value || value === 'unknown') {
+      return <span className="text-gray-400 italic">N/A</span>;
+    }
+    return value.replace(/-/g, ' ');
+  };
+
   const toggleRegistrationStatus = (p: Participant) => {
     const newStatus = p.registration_status === "confirmed" ? "incomplete" : "confirmed";
     onUpdate(p.id, { registration_status: newStatus });
@@ -190,17 +197,17 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs capitalize">
                     <Home className="w-3 h-3 text-gray-400" />
-                    {p.accommodation_plan?.replace(/-/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+                    {formatLogistics(p.accommodation_plan)}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs capitalize">
                     <Car className="w-3 h-3 text-gray-400" />
-                    {p.transportation_plan?.replace(/-/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+                    {formatLogistics(p.transportation_plan)}
                   </div>
                 </TableCell>
 
-                {/* New ETA Column */}
+                {/* ETA Column */}
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs">
                     <Clock className="w-3 h-3 text-gray-400" />
@@ -208,7 +215,7 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                   </div>
                 </TableCell>
 
-                {/* New WhatsApp Status Column */}
+                {/* WhatsApp Status Column */}
                 <TableCell>
                   {getStatusBadge(p.whatsapp_status || 'not_invited', "whatsapp")}
                 </TableCell>

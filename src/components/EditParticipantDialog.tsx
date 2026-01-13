@@ -56,6 +56,10 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
 
   useEffect(() => {
     if (open && participant) {
+      // Normalize null/undefined/empty string values to "unknown" for Select components
+      const getNormalizedValue = (value: string | undefined | null, defaultValue: string = "unknown") => 
+        (value === null || value === undefined || value === "") ? defaultValue : value;
+
       setFormData({
         full_name: participant.full_name || "",
         email: participant.email || "",
@@ -70,8 +74,8 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
         last_contacted: participant.last_contacted 
           ? new Date(participant.last_contacted).toISOString().split('T')[0] 
           : "",
-        accommodation_plan: participant.accommodation_plan || "",
-        transportation_plan: participant.transportation_plan || "",
+        accommodation_plan: getNormalizedValue(participant.accommodation_plan),
+        transportation_plan: getNormalizedValue(participant.transportation_plan),
         eta: participant.eta || "",
         whatsapp_status: participant.whatsapp_status || "not_invited"
       });
@@ -82,6 +86,8 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
     e.preventDefault();
     if (!participant) return;
 
+    // Convert "unknown" back to null/undefined for database storage if needed, 
+    // but for simplicity, we'll just save the string value.
     const updates: Partial<Participant> = {
       ...formData,
       last_contacted: formData.last_contacted ? new Date(formData.last_contacted) : undefined
@@ -176,7 +182,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                     <SelectItem value="camping">Camping (bring own tent)</SelectItem>
                     <SelectItem value="offsite">Offsite (own accommodation)</SelectItem>
                     <SelectItem value="courthouse">Courthouse</SelectItem>
-                    <SelectItem value="">N/A or Unknown</SelectItem>
+                    <SelectItem value="unknown">N/A or Unknown</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -196,7 +202,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                     <SelectItem value="driving">Driving (own vehicle)</SelectItem>
                     <SelectItem value="driving-lift">Driving (can give a lift)</SelectItem>
                     <SelectItem value="need-lift">Need a lift</SelectItem>
-                    <SelectItem value="">N/A or Unknown</SelectItem>
+                    <SelectItem value="unknown">N/A or Unknown</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
