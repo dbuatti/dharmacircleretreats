@@ -106,6 +106,9 @@ const PublicRegistration = () => {
         } else if (error.code === "23503") {
           setError("Invalid retreat ID. Please check your registration link.");
           toast.error("Invalid retreat link");
+        } else if (error.code === "23514") {
+          setError("Invalid data format. Please check your inputs.");
+          toast.error("Data validation error");
         } else {
           setError(`Registration failed: ${error.message}`);
           toast.error("Registration failed");

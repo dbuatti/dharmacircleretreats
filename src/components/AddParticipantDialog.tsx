@@ -44,6 +44,7 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
       registration_status: "received",
       payment_status: "not_paid",
       attendance_status: "interested",
+      source: "manual",
       tags: ["manual-entry"]
     });
 
