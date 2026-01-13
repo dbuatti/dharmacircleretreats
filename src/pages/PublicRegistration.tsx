@@ -77,18 +77,19 @@ const PublicRegistration = () => {
 
     setSubmitting(true);
     try {
+      // Prepare data with proper types
       const insertData = {
         full_name: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || null,
         dietary_requirements: formData.dietary_requirements.trim() || null,
         notes: formData.notes.trim() || null,
-        retreat_id: id,
+        retreat_id: id, // This will be handled as UUID by the database
         source: "public",
         registration_status: "received",
         payment_status: "not_paid",
         attendance_status: "interested",
-        user_id: retreat?.user_id || null,
+        user_id: retreat?.user_id || null, // Link to organizer
         tags: ["public-registration"]
       };
 
@@ -102,6 +103,9 @@ const PublicRegistration = () => {
         if (error.code === "23505") {
           setError("This email is already registered for this retreat.");
           toast.error("Already registered");
+        } else if (error.code === "23503") {
+          setError("Invalid retreat ID. Please check your registration link.");
+          toast.error("Invalid retreat link");
         } else {
           setError(`Registration failed: ${error.message}`);
           toast.error("Registration failed");
