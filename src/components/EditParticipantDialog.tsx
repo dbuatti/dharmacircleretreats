@@ -20,8 +20,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Participant } from "@/types";
-import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, DollarSign, CheckCircle2, Users } from "lucide-react";
+import { Participant, RegistrationStatus, PaymentStatus, AttendanceStatus } from "@/types";
+import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users } from "lucide-react";
 
 interface EditParticipantDialogProps {
   participant: Participant | null;
@@ -36,33 +36,20 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
   onOpenChange,
   onSave
 }) => {
-  const [formData, setFormData] = useState<{
-    full_name: string;
-    email: string;
-    phone: string;
-    dietary_requirements: string;
-    notes: string;
-    registration_status: string;
-    payment_status: string;
-    attendance_status: string;
-    source: string;
-    tags: string[];
-    last_contacted: string;
-  }>({
+  const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     phone: "",
     dietary_requirements: "",
     notes: "",
-    registration_status: "received",
-    payment_status: "not_paid",
-    attendance_status: "interested",
+    registration_status: "received" as RegistrationStatus,
+    payment_status: "not_paid" as PaymentStatus,
+    attendance_status: "interested" as AttendanceStatus,
     source: "",
-    tags: [],
+    tags: [] as string[],
     last_contacted: ""
   });
 
-  // Reset form when dialog opens or participant changes
   useEffect(() => {
     if (open && participant) {
       setFormData({
@@ -87,9 +74,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
     e.preventDefault();
     if (!participant) return;
 
-    const updates = {
+    const updates: Partial<Participant> = {
       ...formData,
-      last_contacted: formData.last_contacted ? new Date(formData.last_contacted) : null
+      last_contacted: formData.last_contacted ? new Date(formData.last_contacted) : undefined
     };
 
     onSave(participant.id, updates);
@@ -97,7 +84,6 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
   };
 
   const handleTagsChange = (value: string) => {
-    // Split by comma and clean up
     const tags = value.split(',').map(t => t.trim()).filter(t => t);
     setFormData({ ...formData, tags });
   };
@@ -173,7 +159,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                 </Label>
                 <Select 
                   value={formData.registration_status} 
-                  onValueChange={(value) => setFormData({...formData, registration_status: value})}
+                  onValueChange={(value: RegistrationStatus) => setFormData({...formData, registration_status: value})}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -194,7 +180,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                 </Label>
                 <Select 
                   value={formData.payment_status} 
-                  onValueChange={(value) => setFormData({...formData, payment_status: value})}
+                  onValueChange={(value: PaymentStatus) => setFormData({...formData, payment_status: value})}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -213,7 +199,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                 </Label>
                 <Select 
                   value={formData.attendance_status} 
-                  onValueChange={(value) => setFormData({...formData, attendance_status: value})}
+                  onValueChange={(value: AttendanceStatus) => setFormData({...formData, attendance_status: value})}
                 >
                   <SelectTrigger>
                     <SelectValue />
