@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CheckCircle2, Calendar, MapPin } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, Loader2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const PublicRegistration = () => {
   const { id } = useParams<{ id: string }>();
   const [retreat, setRetreat] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
@@ -28,18 +29,24 @@ const PublicRegistration = () => {
   useEffect(() => {
     const fetchRetreat = async () => {
       if (!id) return;
-      const { data, error } = await supabase
-        .from("retreats")
-        .select("*")
-        .eq("id", id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("retreats")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-      if (error) {
-        toast.error("Retreat not found");
-      } else {
-        setRetreat(data);
+        if (error) {
+          console.error("Error fetching retreat:", error);
+          toast.error("Retreat not found");
+        } else {
+          setRetreat(data);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchRetreat();
@@ -52,31 +59,62 @@ const PublicRegistration = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from("participants")
-      .insert([
-        {
-          ...formData,
-          retreat_id: id,
-          source: "public",
-          registration_status: "received",
-          payment_status: "not_paid",
-          attendance_status: "interested",
-          user_id: retreat.user_id,
-          tags: ["public-registration"]
-        }
-      ]);
+    setSubmitting(true);
+    try {
+      // Prepare the data, ensuring we don't send invalid UUIDs or empty strings where nulls are better
+      const insertData = {
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || null,
+        dietary_requirements: formData.dietary_requirements.trim() || null,
+        notes: formData.notes.trim() || null,
+        retreat_id: id,
+        source: "public",
+        registration_status: "received",
+        payment_status: "not_paid",
+        attendance_status: "interested",
+        user_id: retreat?.user_id || null, // Ensure we link it to the organizer
+        tags: ["public-registration"]
+      };
 
-    if (error) {
-      toast.error("Failed to register. Please try again.");
-    } else {
-      setSubmitted(true);
-      toast.success("Registration submitted!");
+      const { error } = await supabase
+        .from("participants")
+        .insert([insertData]);
+
+      if (error) {
+        console.error("Submission error details:", error);
+        toast.error(`Registration failed: ${error.message}`);
+      } else {
+        setSubmitted(true);
+        toast.success("Registration submitted!");
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!retreat) return <div className="min-h-screen flex items-center justify-center">Retreat not found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#1e2a5e]" />
+      </div>
+    );
+  }
+
+  if (!retreat) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc] p-4 text-center">
+        <div className="space-y-4">
+          <h1 className="text-2xl font-light text-[#1e2a5e]">Retreat Not Found</h1>
+          <p className="text-gray-500">The registration link appears to be invalid or the retreat has been removed.</p>
+          <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -109,7 +147,7 @@ const PublicRegistration = () => {
           <div className="space-y-2">
             <h2 className="brand-script text-[#1e2a5e]/60 text-2xl italic tracking-normal">Space for awakening</h2>
             <h1 className="text-4xl font-light tracking-widest text-[#1e2a5e] uppercase">{retreat.name}</h1>
-            <div className="flex justify-center gap-8 text-[11px] uppercase tracking-[0.2em] text-gray-400 font-medium">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-[11px] uppercase tracking-[0.2em] text-gray-400 font-medium">
               <span className="flex items-center gap-2"><Calendar className="w-3 h-3" /> {retreat.dates}</span>
               <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {retreat.location}</span>
             </div>
@@ -133,6 +171,7 @@ const PublicRegistration = () => {
                     className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
                     value={formData.full_name}
                     onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                    disabled={submitting}
                   />
                 </div>
                 <div className="grid md:grid-cols-2 gap-8">
@@ -145,6 +184,7 @@ const PublicRegistration = () => {
                       className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      disabled={submitting}
                     />
                   </div>
                   <div className="space-y-2">
@@ -154,6 +194,7 @@ const PublicRegistration = () => {
                       className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      disabled={submitting}
                     />
                   </div>
                 </div>
@@ -165,6 +206,7 @@ const PublicRegistration = () => {
                     className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors placeholder:text-gray-300 placeholder:italic"
                     value={formData.dietary_requirements}
                     onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
+                    disabled={submitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -175,17 +217,29 @@ const PublicRegistration = () => {
                     className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 min-h-[100px] transition-colors resize-none placeholder:text-gray-300 placeholder:italic"
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    disabled={submitting}
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-[#1e2a5e] hover:bg-[#2b3a7a] text-white uppercase tracking-[0.2em] py-6 rounded-none shadow-md transition-all active:scale-[0.98]">
-                Submit Registration
+              <Button 
+                type="submit" 
+                disabled={submitting}
+                className="w-full bg-[#1e2a5e] hover:bg-[#2b3a7a] text-white uppercase tracking-[0.2em] py-6 rounded-none shadow-md transition-all active:scale-[0.98]"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Registration"
+                )}
               </Button>
             </form>
           </CardContent>
         </Card>
         
-        <footer className="text-center pt-12 text-[10px] uppercase tracking-widest text-gray-400 font-medium">
+        <footer className="text-center pt-12 text-[10px] uppercase tracking-widest text-gray-400 font-medium pb-8">
           Dharma Circle — Yoga & Buddhist Meditation Centre
         </footer>
       </div>
