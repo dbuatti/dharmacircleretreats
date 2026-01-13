@@ -19,9 +19,11 @@ export interface Participant {
   added_by?: string;
   created_at: Date;
   user_id?: string;
-  // New fields for logistics tracking
+  // Logistics tracking
   accommodation_plan?: string;
   transportation_plan?: string;
+  eta?: string; // Estimated Time of Arrival
+  whatsapp_status?: string; // e.g., 'Joined', 'Invited', 'Not applicable'
 }
 
 export interface Retreat {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, User, Mail, Phone, Utensils, FileText } from "lucide-react";
+import { Plus, User, Mail, Phone, Utensils, FileText, Clock } from "lucide-react";
 import { Participant } from "@/types";
 
 interface AddParticipantDialogProps {
@@ -21,7 +21,8 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
     email: "",
     phone: "",
     dietary_requirements: "",
-    notes: ""
+    notes: "",
+    eta: "" // New field
   });
 
   const resetForm = () => {
@@ -30,7 +31,8 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
       email: "",
       phone: "",
       dietary_requirements: "",
-      notes: ""
+      notes: "",
+      eta: ""
     });
   };
 
@@ -45,7 +47,8 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
       payment_status: "not_paid",
       attendance_status: "interested",
       source: "manual",
-      tags: ["manual-entry"]
+      tags: ["manual-entry"],
+      whatsapp_status: "not_invited" // Default status for manual entry
     });
 
     resetForm();
@@ -115,6 +118,19 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                 />
               </div>
+            </div>
+            
+            <div className="space-y-1">
+              <Label htmlFor="eta" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                <Clock className="w-3 h-3" /> Estimated Arrival Time (ETA)
+              </Label>
+              <Input 
+                id="eta"
+                placeholder="e.g., Fri 5pm or Sat 9:00 am"
+                className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
+                value={formData.eta}
+                onChange={(e) => setFormData({...formData, eta: e.target.value})}
+              />
             </div>
 
             <div className="space-y-1">

@@ -13,7 +13,9 @@ import {
   Edit,
   Home,
   Car,
-  Tag
+  Tag,
+  Clock,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +45,7 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  const getStatusBadge = (status: string, type: "registration" | "payment" | "attendance") => {
+  const getStatusBadge = (status: string, type: "registration" | "payment" | "attendance" | "whatsapp") => {
     const styles = {
       registration: {
         not_sent: "bg-gray-200 text-gray-800",
@@ -62,11 +64,20 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
         confirmed: "bg-green-100 text-green-800",
         withdrawn: "bg-red-100 text-red-800",
         declined: "bg-red-200 text-red-900"
+      },
+      whatsapp: {
+        joined: "bg-green-100 text-green-800",
+        invited: "bg-blue-100 text-blue-800",
+        not_invited: "bg-gray-100 text-gray-600",
+        not_applicable: "bg-gray-50 text-gray-400"
       }
     };
     
     const displayText = status.replace(/_/g, " ");
-    return <Badge className={`${styles[type][status as keyof typeof styles[typeof type]]} capitalize`}>{displayText}</Badge>;
+    const typeKey = type === 'whatsapp' ? 'whatsapp' : type;
+    const statusKey = status as keyof typeof styles[typeof typeKey];
+
+    return <Badge className={`${styles[typeKey][statusKey] || 'bg-gray-100 text-gray-600'} capitalize`}>{displayText}</Badge>;
   };
 
   const toggleRegistrationStatus = (p: Participant) => {
@@ -101,6 +112,8 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
               <TableHead className="w-[180px]">Contact</TableHead>
               <TableHead>Accommodation</TableHead>
               <TableHead>Transport</TableHead>
+              <TableHead>ETA</TableHead>
+              <TableHead>WhatsApp</TableHead>
               <TableHead>Registration</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Attendance</TableHead>
@@ -173,7 +186,7 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                   </div>
                 </TableCell>
                 
-                {/* New Logistics Columns */}
+                {/* Logistics Columns */}
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs capitalize">
                     <Home className="w-3 h-3 text-gray-400" />
@@ -185,6 +198,19 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                     <Car className="w-3 h-3 text-gray-400" />
                     {p.transportation_plan?.replace(/-/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
                   </div>
+                </TableCell>
+
+                {/* New ETA Column */}
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    {p.eta || <span className="text-gray-400 italic">N/A</span>}
+                  </div>
+                </TableCell>
+
+                {/* New WhatsApp Status Column */}
+                <TableCell>
+                  {getStatusBadge(p.whatsapp_status || 'not_invited', "whatsapp")}
                 </TableCell>
 
                 <TableCell>{getStatusBadge(p.registration_status, "registration")}</TableCell>

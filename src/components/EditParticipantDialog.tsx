@@ -21,7 +21,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Participant, RegistrationStatus, PaymentStatus, AttendanceStatus } from "@/types";
-import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users, Home, Car } from "lucide-react";
+import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users, Home, Car, Clock, MessageCircle } from "lucide-react";
 
 interface EditParticipantDialogProps {
   participant: Participant | null;
@@ -49,7 +49,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
     tags: [] as string[],
     last_contacted: "",
     accommodation_plan: "",
-    transportation_plan: ""
+    transportation_plan: "",
+    eta: "", // New field
+    whatsapp_status: "" // New field
   });
 
   useEffect(() => {
@@ -69,7 +71,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
           ? new Date(participant.last_contacted).toISOString().split('T')[0] 
           : "",
         accommodation_plan: participant.accommodation_plan || "",
-        transportation_plan: participant.transportation_plan || ""
+        transportation_plan: participant.transportation_plan || "",
+        eta: participant.eta || "",
+        whatsapp_status: participant.whatsapp_status || "not_invited"
       });
     }
   }, [open, participant]);
@@ -156,7 +160,7 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
               <Home className="w-4 h-4" /> Logistics
             </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-accommodation" className="text-xs uppercase tracking-widest text-gray-500">
                   Accommodation Plan
@@ -195,6 +199,18 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                     <SelectItem value="">N/A or Unknown</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-eta" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                  <Clock className="w-3 h-3" /> ETA
+                </Label>
+                <Input 
+                  id="edit-eta"
+                  placeholder="e.g., Fri 5pm"
+                  value={formData.eta}
+                  onChange={(e) => setFormData({...formData, eta: e.target.value})}
+                />
               </div>
             </div>
           </div>
@@ -267,7 +283,26 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-whatsapp-status" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
+                  <MessageCircle className="w-3 h-3" /> WhatsApp Status
+                </Label>
+                <Select 
+                  value={formData.whatsapp_status} 
+                  onValueChange={(value) => setFormData({...formData, whatsapp_status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="joined">Joined</SelectItem>
+                    <SelectItem value="invited">Invited</SelectItem>
+                    <SelectItem value="not_invited">Not Invited</SelectItem>
+                    <SelectItem value="not_applicable">N/A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-source" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
                   <Tag className="w-3 h-3" /> Source
