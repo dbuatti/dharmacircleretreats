@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, User, Mail, Phone, Utensils, FileText, Clock } from "lucide-react";
 import { Participant } from "@/types";
+import { DietarySelect } from "./DietarySelect"; // Import the new component
 
 interface AddParticipantDialogProps {
   onAdd: (participant: Partial<Participant>) => void;
@@ -20,9 +21,9 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
     full_name: "",
     email: "",
     phone: "",
-    dietary_requirements: "",
+    dietary_requirements: "", // Now handled by DietarySelect
     notes: "",
-    eta: "" // New field
+    eta: ""
   });
 
   const resetForm = () => {
@@ -48,7 +49,7 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
       attendance_status: "interested",
       source: "manual",
       tags: ["manual-entry"],
-      whatsapp_status: "not_invited" // Default status for manual entry
+      whatsapp_status: "not_invited"
     });
 
     resetForm();
@@ -137,12 +138,10 @@ export const AddParticipantDialog: React.FC<AddParticipantDialogProps> = ({ onAd
               <Label htmlFor="dietary" className="flex items-center gap-2 text-xs uppercase tracking-widest text-gray-500">
                 <Utensils className="w-3 h-3" /> Dietary Requirements
               </Label>
-              <Input 
-                id="dietary"
-                placeholder="Vegan, Gluten-free, etc."
-                className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10"
+              {/* REPLACED Input with DietarySelect */}
+              <DietarySelect
                 value={formData.dietary_requirements}
-                onChange={(e) => setFormData({...formData, dietary_requirements: e.target.value})}
+                onSave={(value) => setFormData({...formData, dietary_requirements: value})}
               />
             </div>
 
