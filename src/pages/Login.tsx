@@ -34,7 +34,7 @@ const Login = () => {
         <CardContent className="p-8">
           <Auth
             supabaseClient={supabase}
-            providers={[]}
+            providers={['google']}
             appearance={{
               theme: ThemeSupa,
               variables: {
@@ -48,7 +48,7 @@ const Login = () => {
               className: {
                 button: 'rounded-none uppercase tracking-widest text-[10px] h-11',
                 input: 'rounded-none border-0 border-b border-gray-200 px-0 h-10 focus:ring-0 focus:border-[#1e2a5e]',
-                label: 'uppercase tracking-widest text-[9px] text-gray-500 font-medium',
+                label: 'uppercase tracking-widest text-[9px] text-gray-500 font-medium'
               }
             }}
             theme="light"
