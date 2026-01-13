@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Participant } from "@/components/retreat-dashboard";
+import { Participant } from "@/types";
 
 interface StatsCardsProps {
   participants: Participant[];

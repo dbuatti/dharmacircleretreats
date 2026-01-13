@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Participant, Retreat } from "@/components/retreat-dashboard";
+import { Participant, Retreat } from "@/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/contexts/SessionContext";
@@ -53,8 +53,12 @@ export function useRetreatData(retreatId: string | undefined) {
 
     const channel = supabase
       .channel(`retreat-${retreatId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `retreat_id=eq.${retreatId}` }, 
-      () => fetchData())
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'participants', 
+        filter: `retreat_id=eq.${retreatId}` 
+      }, () => fetchData())
       .subscribe();
 
     return () => {

@@ -17,7 +17,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Participant } from "@/components/retreat-dashboard";
+import { Participant } from "@/types";
 
 interface ParticipantTableProps {
   participants: Participant[];
