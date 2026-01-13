@@ -21,7 +21,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Participant, RegistrationStatus, PaymentStatus, AttendanceStatus } from "@/types";
-import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users } from "lucide-react";
+import { User, Mail, Phone, Utensils, FileText, Calendar, Tag, CheckCircle2, Users, Home, Car } from "lucide-react";
 
 interface EditParticipantDialogProps {
   participant: Participant | null;
@@ -47,7 +47,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
     attendance_status: "interested" as AttendanceStatus,
     source: "",
     tags: [] as string[],
-    last_contacted: ""
+    last_contacted: "",
+    accommodation_plan: "",
+    transportation_plan: ""
   });
 
   useEffect(() => {
@@ -65,7 +67,9 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
         tags: participant.tags || [],
         last_contacted: participant.last_contacted 
           ? new Date(participant.last_contacted).toISOString().split('T')[0] 
-          : ""
+          : "",
+        accommodation_plan: participant.accommodation_plan || "",
+        transportation_plan: participant.transportation_plan || ""
       });
     }
   }, [open, participant]);
@@ -142,6 +146,55 @@ export const EditParticipantDialog: React.FC<EditParticipantDialogProps> = ({
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Logistics Information */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-gray-500 flex items-center gap-2">
+              <Home className="w-4 h-4" /> Logistics
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-accommodation" className="text-xs uppercase tracking-widest text-gray-500">
+                  Accommodation Plan
+                </Label>
+                <Select 
+                  value={formData.accommodation_plan} 
+                  onValueChange={(value) => setFormData({...formData, accommodation_plan: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select accommodation..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="camping">Camping (bring own tent)</SelectItem>
+                    <SelectItem value="offsite">Offsite (own accommodation)</SelectItem>
+                    <SelectItem value="courthouse">Courthouse</SelectItem>
+                    <SelectItem value="">N/A or Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-transportation" className="text-xs uppercase tracking-widest text-gray-500">
+                  Transportation Plan
+                </Label>
+                <Select 
+                  value={formData.transportation_plan} 
+                  onValueChange={(value) => setFormData({...formData, transportation_plan: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select transportation..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="driving">Driving (own vehicle)</SelectItem>
+                    <SelectItem value="driving-lift">Driving (can give a lift)</SelectItem>
+                    <SelectItem value="need-lift">Need a lift</SelectItem>
+                    <SelectItem value="">N/A or Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

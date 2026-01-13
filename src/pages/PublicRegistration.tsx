@@ -134,7 +134,9 @@ const PublicRegistration = () => {
         full_name: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
         dietary_requirements: formData.dietary_requirements.trim() || null,
-        notes: `Accommodation: ${formData.accommodation_plan}\nTransportation: ${formData.transportation_plan}${formData.notes ? `\n\nAdditional Notes: ${formData.notes}` : ''}`,
+        notes: formData.notes.trim() || null, // Notes are now just notes
+        accommodation_plan: formData.accommodation_plan, // Dedicated column
+        transportation_plan: formData.transportation_plan, // Dedicated column
         retreat_id: id,
         source: "public",
         registration_status: "received",
@@ -422,6 +424,7 @@ const PublicRegistration = () => {
                       <SelectContent>
                         <SelectItem value="camping">Camping (bring your own tent)</SelectItem>
                         <SelectItem value="offsite">Offsite (own accommodation)</SelectItem>
+                        <SelectItem value="courthouse">Courthouse</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

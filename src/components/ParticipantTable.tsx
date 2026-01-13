@@ -10,7 +10,10 @@ import {
   Calendar,
   Info,
   UserCheck,
-  Edit
+  Edit,
+  Home,
+  Car,
+  Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,10 +99,11 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
             <TableRow>
               <TableHead className="w-[200px]">Participant</TableHead>
               <TableHead className="w-[180px]">Contact</TableHead>
+              <TableHead>Accommodation</TableHead>
+              <TableHead>Transport</TableHead>
               <TableHead>Registration</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Attendance</TableHead>
-              <TableHead>Dietary</TableHead>
               <TableHead className="text-right w-[140px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -117,6 +121,22 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                       </span>
                     )}
                   </div>
+                  
+                  {/* Tags and Source */}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {p.source && (
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-medium bg-gray-100 text-gray-600">
+                        Source: {p.source}
+                      </Badge>
+                    )}
+                    {p.tags && p.tags.map(tag => (
+                      <Badge key={tag} variant="outline" className="text-[9px] uppercase tracking-widest font-medium text-blue-600 border-blue-200">
+                        <Tag className="w-2.5 h-2.5 mr-1" /> {tag}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* Notes and Dates */}
                   {p.notes && (
                     <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
                       <Info className="w-3 h-3" />
@@ -144,16 +164,33 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                         {p.phone}
                       </div>
                     )}
+                    {p.dietary_requirements && (
+                      <div className="flex items-center gap-1 text-xs mt-2">
+                        <span className="text-gray-500 font-medium">Diet:</span>
+                        <Badge variant="outline" className="text-xs capitalize">{p.dietary_requirements}</Badge>
+                      </div>
+                    )}
                   </div>
                 </TableCell>
+                
+                {/* New Logistics Columns */}
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs capitalize">
+                    <Home className="w-3 h-3 text-gray-400" />
+                    {p.accommodation_plan?.replace(/-/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-xs capitalize">
+                    <Car className="w-3 h-3 text-gray-400" />
+                    {p.transportation_plan?.replace(/-/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+                  </div>
+                </TableCell>
+
                 <TableCell>{getStatusBadge(p.registration_status, "registration")}</TableCell>
                 <TableCell>{getStatusBadge(p.payment_status, "payment")}</TableCell>
                 <TableCell>{getStatusBadge(p.attendance_status, "attendance")}</TableCell>
-                <TableCell>
-                  {p.dietary_requirements ? (
-                    <Badge variant="outline" className="text-xs capitalize">{p.dietary_requirements}</Badge>
-                  ) : <span className="text-gray-400 text-sm italic">None</span>}
-                </TableCell>
+                
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button 

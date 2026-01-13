@@ -19,6 +19,9 @@ export interface Participant {
   added_by?: string;
   created_at: Date;
   user_id?: string;
+  // New fields for logistics tracking
+  accommodation_plan?: string;
+  transportation_plan?: string;
 }
 
 export interface Retreat {
