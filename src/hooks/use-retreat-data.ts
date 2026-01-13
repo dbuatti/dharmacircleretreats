@@ -68,33 +68,58 @@ export function useRetreatData(retreatId: string | undefined) {
 
   const updateRetreat = async (updates: Partial<Retreat>) => {
     const { error } = await supabase.from('retreats').update(updates).eq('id', retreatId);
-    if (error) toast.error("Update failed");
-    else {
+    if (error) {
+      toast.error("Update failed");
+      console.error("Update retreat error:", error);
+    } else {
       toast.success("Retreat updated");
       fetchData();
     }
   };
 
   const addParticipant = async (data: Partial<Participant>) => {
+    // Validate required fields
+    if (!data.full_name || !data.email) {
+      toast.error("Name and email are required");
+      return;
+    }
+
     const { error } = await supabase.from('participants').insert([{
       ...data,
       retreat_id: retreatId,
       user_id: session?.user.id,
       added_by: session?.user.email
     }]);
-    if (error) toast.error("Failed to add participant");
-    else toast.success("Participant added");
+    
+    if (error) {
+      toast.error("Failed to add participant");
+      console.error("Add participant error:", error);
+    } else {
+      toast.success("Participant added");
+      fetchData();
+    }
   };
 
   const updateParticipant = async (id: string, updates: Partial<Participant>) => {
     const { error } = await supabase.from('participants').update(updates).eq('id', id);
-    if (error) toast.error("Update failed");
+    if (error) {
+      toast.error("Update failed");
+      console.error("Update participant error:", error);
+    } else {
+      toast.success("Participant updated");
+      fetchData();
+    }
   };
 
   const deleteParticipant = async (id: string) => {
     const { error } = await supabase.from('participants').delete().eq('id', id);
-    if (error) toast.error("Delete failed");
-    else toast.success("Participant removed");
+    if (error) {
+      toast.error("Delete failed");
+      console.error("Delete participant error:", error);
+    } else {
+      toast.success("Participant removed");
+      fetchData();
+    }
   };
 
   return {

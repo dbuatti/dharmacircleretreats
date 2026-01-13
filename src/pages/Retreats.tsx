@@ -67,6 +67,7 @@ const Retreats = () => {
 
     if (error) {
       toast.error("Failed to create retreat");
+      console.error("Create retreat error:", error);
     } else {
       toast.success("Retreat created!");
       setIsCreateOpen(false);

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CheckCircle2, Calendar, MapPin, Loader2 } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, Loader2, AlertCircle } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 
 const PublicRegistration = () => {
@@ -18,6 +18,7 @@ const PublicRegistration = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -38,12 +39,16 @@ const PublicRegistration = () => {
 
         if (error) {
           console.error("Error fetching retreat:", error);
+          setError("Retreat not found or link is invalid.");
           toast.error("Retreat not found");
+        } else if (data?.status === "closed" || data?.status === "archived") {
+          setError("This retreat is no longer accepting registrations.");
         } else {
           setRetreat(data);
         }
       } catch (err) {
         console.error("Fetch error:", err);
+        setError("An error occurred while loading the retreat.");
       } finally {
         setLoading(false);
       }
@@ -54,17 +59,27 @@ const PublicRegistration = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    
     if (!formData.full_name || !formData.email) {
-      toast.error("Name and Email are required");
+      setError("Name and Email are required fields.");
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address.");
+      toast.error("Invalid email format");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Prepare the data, ensuring we don't send invalid UUIDs or empty strings where nulls are better
       const insertData = {
         full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim() || null,
         dietary_requirements: formData.dietary_requirements.trim() || null,
         notes: formData.notes.trim() || null,
@@ -73,7 +88,7 @@ const PublicRegistration = () => {
         registration_status: "received",
         payment_status: "not_paid",
         attendance_status: "interested",
-        user_id: retreat?.user_id || null, // Ensure we link it to the organizer
+        user_id: retreat?.user_id || null,
         tags: ["public-registration"]
       };
 
@@ -83,14 +98,22 @@ const PublicRegistration = () => {
 
       if (error) {
         console.error("Submission error details:", error);
-        toast.error(`Registration failed: ${error.message}`);
+        // Check for specific constraint violations
+        if (error.code === "23505") {
+          setError("This email is already registered for this retreat.");
+          toast.error("Already registered");
+        } else {
+          setError(`Registration failed: ${error.message}`);
+          toast.error("Registration failed");
+        }
       } else {
         setSubmitted(true);
-        toast.success("Registration submitted!");
+        toast.success("Registration submitted successfully!");
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
+      toast.error("Unexpected error");
     } finally {
       setSubmitting(false);
     }
@@ -104,13 +127,19 @@ const PublicRegistration = () => {
     );
   }
 
-  if (!retreat) {
+  if (error && !retreat) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc] p-4 text-center">
-        <div className="space-y-4">
-          <h1 className="text-2xl font-light text-[#1e2a5e]">Retreat Not Found</h1>
-          <p className="text-gray-500">The registration link appears to be invalid or the retreat has been removed.</p>
-          <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+        <div className="space-y-4 max-w-md">
+          <div className="flex justify-center">
+            <BrandLogo className="w-16 h-16" />
+          </div>
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+          <h1 className="text-2xl font-light text-[#1e2a5e]">Registration Unavailable</h1>
+          <p className="text-gray-500 font-serif italic">{error}</p>
+          <Button variant="outline" onClick={() => window.location.href = "/"}>
+            Return to Home
+          </Button>
         </div>
       </div>
     );
@@ -128,9 +157,16 @@ const PublicRegistration = () => {
             <div className="space-y-2">
               <h2 className="text-2xl font-light uppercase tracking-widest text-[#1e2a5e]">Thank You</h2>
               <p className="text-gray-500 font-serif italic">
-                Your registration for {retreat.name} has been received. We will be in touch shortly.
+                Your registration for <strong>{retreat?.name}</strong> has been received. We will be in touch shortly.
               </p>
             </div>
+            <Button 
+              variant="outline" 
+              className="mt-6 rounded-none uppercase tracking-[0.2em] text-[10px]"
+              onClick={() => window.location.reload()}
+            >
+              Register Another
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -146,10 +182,10 @@ const PublicRegistration = () => {
           </div>
           <div className="space-y-2">
             <h2 className="brand-script text-[#1e2a5e]/60 text-2xl italic tracking-normal">Space for awakening</h2>
-            <h1 className="text-4xl font-light tracking-widest text-[#1e2a5e] uppercase">{retreat.name}</h1>
+            <h1 className="text-4xl font-light tracking-widest text-[#1e2a5e] uppercase">{retreat?.name}</h1>
             <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-[11px] uppercase tracking-[0.2em] text-gray-400 font-medium">
-              <span className="flex items-center gap-2"><Calendar className="w-3 h-3" /> {retreat.dates}</span>
-              <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {retreat.location}</span>
+              <span className="flex items-center gap-2"><Calendar className="w-3 h-3" /> {retreat?.dates}</span>
+              <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> {retreat?.location}</span>
             </div>
           </div>
         </div>
@@ -164,7 +200,7 @@ const PublicRegistration = () => {
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="full_name" className="text-[10px] uppercase tracking-widest text-gray-500">Full Name</Label>
+                  <Label htmlFor="full_name" className="text-[10px] uppercase tracking-widest text-gray-500">Full Name *</Label>
                   <Input 
                     id="full_name" 
                     required 
@@ -176,7 +212,7 @@ const PublicRegistration = () => {
                 </div>
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[10px] uppercase tracking-widest text-gray-500">Email Address</Label>
+                    <Label htmlFor="email" className="text-[10px] uppercase tracking-widest text-gray-500">Email Address *</Label>
                     <Input 
                       id="email" 
                       type="email" 
@@ -221,6 +257,13 @@ const PublicRegistration = () => {
                   />
                 </div>
               </div>
+              
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-none text-sm">
+                  {error}
+                </div>
+              )}
+
               <Button 
                 type="submit" 
                 disabled={submitting}

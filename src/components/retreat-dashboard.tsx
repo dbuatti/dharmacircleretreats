@@ -25,7 +25,7 @@ import { ParticipantTable } from "./ParticipantTable";
 import { EditRetreatDialog } from "./EditRetreatDialog";
 import { BrandLogo } from "./BrandLogo";
 import { AddParticipantDialog } from "./AddParticipantDialog";
-import { Participant, Retreat, RegistrationStatus } from "@/types";
+import { Participant, Retreat } from "@/types";
 
 interface RetreatDashboardProps {
   retreat: Retreat;
