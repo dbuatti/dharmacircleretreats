@@ -54,8 +54,11 @@ export const SelectCell: React.FC<SelectCellProps> = ({
   const handleValueChange = (newValue: string) => {
     setValue(newValue);
     if (newValue !== initialValue) {
+      console.log(`[SelectCell] Saving change for ${columnId}: ${initialValue} -> ${newValue}`);
       onSave(rowId, columnId, newValue);
     }
+    // We rely on the Select component closing itself, but we explicitly set editing to false
+    // when the value changes to ensure the table cell exits edit mode.
     setIsEditing(false);
   };
 
@@ -66,7 +69,7 @@ export const SelectCell: React.FC<SelectCellProps> = ({
         onValueChange={handleValueChange}
         open={isEditing}
         onOpenChange={(open) => {
-          // Only close editing state if the select component closes
+          // Only close editing state if the select component closes AND we haven't already saved/closed
           if (!open) setIsEditing(false);
         }}
       >
