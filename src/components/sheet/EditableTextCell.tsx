@@ -6,7 +6,7 @@ import { Participant } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface EditableTextCellProps {
-  initialValue: string | undefined;
+  initialValue: string | undefined | null; // Allow null from DB
   rowId: string;
   columnId: keyof Participant;
   onSave: (id: string, columnId: keyof Participant, value: string) => void;
@@ -15,8 +15,10 @@ interface EditableTextCellProps {
   className?: string;
 }
 
+const safeString = (value: string | undefined | null): string => value ?? "";
+
 export const EditableTextCell: React.FC<EditableTextCellProps> = ({
-  initialValue = "",
+  initialValue,
   rowId,
   columnId,
   onSave,
@@ -24,11 +26,11 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
   setIsEditing,
   className
 }) => {
-  const [value, setValue] = useState(initialValue);
+  const [value, setValue] = useState(safeString(initialValue));
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setValue(initialValue);
+    setValue(safeString(initialValue));
   }, [initialValue]);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
   };
 
   const handleSubmit = () => {
-    if (value !== initialValue) {
+    if (value !== safeString(initialValue)) {
       onSave(rowId, columnId, value);
     }
     setIsEditing(false);
@@ -57,7 +59,7 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
       // Note: Tab/Shift+Tab navigation logic is handled by the browser's default focus behavior
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      setValue(initialValue); // Revert changes
+      setValue(safeString(initialValue)); // Revert changes
       setIsEditing(false);
     }
   };
@@ -83,7 +85,7 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
       className={cn("h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm", className)}
       onClick={() => setIsEditing(true)}
     >
-      {initialValue || <span className="text-gray-400 italic">N/A</span>}
+      {safeString(initialValue) || <span className="text-gray-400 italic">N/A</span>}
     </div>
   );
 };

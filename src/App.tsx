@@ -62,41 +62,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading, isAdmin } = useSession();
-
-  useEffect(() => {
-    if (!loading && session && !isAdmin) {
-      toast.error('Admin access required');
-    }
-  }, [session, loading, isAdmin]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e2a5e]"></div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAdmin) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return <>{children}</>;
-};
-
 const App = () => (
   <SessionProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter 
+          future={{ 
+            v7_startTransition: true, 
+            v7_relativeSplatPath: true 
+          }}
+        >
           <Routes>
             <Route 
               path="/" 
