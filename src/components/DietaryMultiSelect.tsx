@@ -40,30 +40,41 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [customText, setCustomText] = useState("");
 
-  // Effect 1: Sync Prop -> State
+  // Effect 1: Sync Prop -> State (Robust Parsing)
   useEffect(() => {
     console.log("[DietaryMultiSelect] Prop 'value' received:", value);
     
-    // Parse the incoming value string into selectedValues and customText
     let currentSelected: string[] = [];
     let currentCustomText = "";
+    const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
 
     if (value) {
-      const parts = value.split(',').map(p => p.trim().toLowerCase()).filter(p => p);
-      const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
+      // Split and trim parts, keeping original case for custom text extraction
+      const parts = value.split(',').map(p => p.trim()).filter(p => p);
       
-      currentSelected = parts.filter(p => predefinedValues.includes(p));
-      
-      if (currentSelected.includes("other")) {
-        const otherEntry = parts.find(p => p.startsWith('other:'));
-        if (otherEntry) {
-            currentCustomText = otherEntry.replace('other:', '').trim();
-        } else {
-            const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p));
-            if (nonPredefinedParts.length > 0) {
-                currentCustomText = nonPredefinedParts.join(', ');
-            }
+      parts.forEach(part => {
+        const lowerPart = part.toLowerCase();
+        
+        if (predefinedValues.includes(lowerPart) && !currentSelected.includes(lowerPart)) {
+          // Case 1: Predefined option (e.g., 'gf', 'vegan')
+          currentSelected.push(lowerPart);
+        } else if (lowerPart.startsWith('other:')) {
+          // Case 2: 'other: custom text' format
+          if (!currentSelected.includes('other')) {
+            currentSelected.push('other');
+          }
+          // Extract text after 'other:'
+          currentCustomText = part.substring('other:'.length).trim();
         }
+      });
+      
+      // Fallback: If 'other' is selected but no 'other:' prefix was found, 
+      // check for any non-predefined parts that might be the custom text (e.g., old format or simple entry)
+      if (currentSelected.includes('other') && !currentCustomText) {
+          const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p.toLowerCase()));
+          if (nonPredefinedParts.length > 0) {
+              currentCustomText = nonPredefinedParts.join(', ');
+          }
       }
     }
     
