@@ -300,11 +300,16 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       },
     },
     meta: {
-      updateData: async (rowIndex: number, columnId: keyof Participant, value: any) => {
-        const row = participants[rowIndex];
-        if (!row) return;
+      updateData: async (rowId: string, columnId: keyof Participant, value: any) => {
+        // Find the row by ID directly from the participants array
+        const row = participants.find(p => p.id === rowId);
+        if (!row) {
+          console.error(`[ParticipantSheet] Row with ID ${rowId} not found`);
+          toast.error("Could not find participant to update");
+          return;
+        }
 
-        const isRowSelected = table.getRow(row.id).getIsSelected();
+        const isRowSelected = table.getRow(rowId).getIsSelected();
         const isMultiSelected = table.getSelectedRowModel().rows.length > 1;
         const isBulkAction = isRowSelected && isMultiSelected;
 
