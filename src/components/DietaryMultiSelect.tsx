@@ -38,33 +38,43 @@ interface DietaryMultiSelectProps {
 const parseValue = (value: string) => {
   let currentSelected: string[] = [];
   let currentCustomText = "";
-  const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
+  // Exclude 'other' itself from simple matching
+  const predefinedValues = DIETARY_OPTIONS.map(o => o.value).filter(v => v !== 'other'); 
 
   if (value) {
     const parts = value.split(',').map(p => p.trim()).filter(p => p);
-    
+    const customParts: string[] = [];
+    let otherSelected = false;
+
     parts.forEach(part => {
       const lowerPart = part.toLowerCase();
       
-      if (predefinedValues.includes(lowerPart) && !currentSelected.includes(lowerPart)) {
-        currentSelected.push(lowerPart);
-      } else if (lowerPart.startsWith('other:')) {
-        if (!currentSelected.includes('other')) {
-          currentSelected.push('other');
+      if (predefinedValues.includes(lowerPart)) {
+        if (!currentSelected.includes(lowerPart)) {
+          currentSelected.push(lowerPart);
         }
+      } else if (lowerPart === 'other') {
+        otherSelected = true;
+      } else if (lowerPart.startsWith('other:')) {
+        otherSelected = true;
         currentCustomText = part.substring('other:'.length).trim();
-      } else if (!predefinedValues.includes(lowerPart) && currentSelected.includes('other')) {
-        // If 'other' is selected, collect all non-predefined parts as custom text
-        currentCustomText = (currentCustomText ? currentCustomText + ', ' : '') + part;
+      } else {
+        // Anything else is treated as custom text
+        customParts.push(part);
       }
     });
     
-    // Final cleanup for custom text if 'other' is selected but wasn't explicitly parsed with 'other:' prefix
-    if (currentSelected.includes('other') && !currentCustomText) {
-        const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p.toLowerCase()));
-        if (nonPredefinedParts.length > 0) {
-            currentCustomText = nonPredefinedParts.join(', ');
-        }
+    // If we found custom parts that weren't prefixed with 'other:', combine them and select 'other'
+    if (customParts.length > 0) {
+        otherSelected = true;
+        // If we already extracted text from 'other:', append the new custom parts
+        currentCustomText = currentCustomText 
+            ? `${currentCustomText}, ${customParts.join(', ')}` 
+            : customParts.join(', ');
+    }
+    
+    if (otherSelected && !currentSelected.includes('other')) {
+        currentSelected.push('other');
     }
   }
   
@@ -79,6 +89,7 @@ const formatValue = (selectedValues: string[], customText: string) => {
     if (customText.trim()) {
       outputParts.push(`other: ${customText.trim()}`);
     } else {
+      // If 'other' is selected but no text is provided, just include 'other'
       outputParts.push('other');
     }
   }
