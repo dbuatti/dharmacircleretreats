@@ -159,120 +159,19 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 4. Data Manipulation and Optimistic Updates ---
 
-  const table = useReactTable({
-    data: sheetState.data,
-    columns: [], // Placeholder, defined below
-    columnResizeMode,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
-    },
-    initialState: {
-      columnPinning: {
-        left: ['select', 'full_name', 'email'],
-      },
-    },
-    meta: {
-      updateData: (rowIndex: number, columnId: keyof Participant, value: any) => {
-        // This is a placeholder function definition for the meta object.
-        // The actual logic is defined in the useCallback below.
-      },
-      setEditingCell: setEditingCell,
-      editingCell: editingCell,
-    }
-  });
-
-  const selectedRows = table.getSelectedRowModel().rows;
-  const isBulkEditing = selectedRows.length > 0;
-  
-  const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
-    const row = dataRef.current[rowIndex];
-    const oldValue = row[columnId];
-    
-    if (oldValue === value) {
-      console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
-      return;
-    }
-
-    const isRowSelected = table.getRow(row.id).getIsSelected();
-    const isMultiSelected = selectedRows.length > 1;
-    const isBulkAction = isRowSelected && isMultiSelected;
-
-    const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
-    const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
-    
-    const updateStartTime = performance.now();
-    
-    // 1. Optimistic Update (Apply change to all affected rows in local state)
-    const newData = dataRef.current.map(p => {
-      if (rowIdsToUpdate.includes(p.id)) {
-        return { ...p, [columnId]: value };
-      }
-      return p;
-    });
-    dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
-    console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
-
-    // 2. Background Sync (Trigger API call for each affected row)
-    const updates = rowsToUpdate.map(r => 
-      onUpdateParticipant(r.id, { [columnId]: value })
-        .catch((error) => {
-          // 3. Rollback on Error (This is complex for bulk, so we log and rely on the user to undo/refresh)
-          console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
-          toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
-          // Note: Full atomic rollback for multiple rows is complex. We rely on the undo history for recovery.
-        })
-    );
-    
-    Promise.all(updates).finally(() => {
-      const duration = performance.now() - updateStartTime;
-      console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
-    });
-  }, [onUpdateParticipant, dispatch, selectedRows.length, table]); // Depend on selectedRows.length and table instance
-
-  // Update table meta with the stable updateData function
-  useEffect(() => {
-    table.options.meta = {
-      ...table.options.meta,
-      updateData: updateData,
-    };
-  }, [updateData, table]);
-
-
-  const handleAddRow = async () => {
-    console.log("[ParticipantSheet] Initiating Add Row.");
-    const newParticipant: Partial<Participant> = {
-      full_name: "New Participant",
-      email: "",
-      registration_status: "not_sent",
-      payment_status: "not_paid",
-      attendance_status: "interested",
-      source: "manual",
-      accommodation_plan: "unknown",
-      transportation_plan: "unknown",
-      whatsapp_status: "not_invited",
-    };
-    await onAddParticipant(newParticipant);
-    console.log("[ParticipantSheet] Add Row finished.");
-  };
-
-  // Define a custom ColumnDef type to include the non-standard 'enableEditing' property
+  // Define columns first so table can be initialized
   type ParticipantColumnDef = ColumnDef<Participant> & {
     enableEditing?: boolean;
   };
 
-  // --- 5. Column Definitions ---
-
   const columns = useMemo<ParticipantColumnDef[]>(() => {
     console.log("[ParticipantSheet] Recalculating Column Definitions (useMemo).");
+    // We define columns here, but the updateData function needs to be stable and defined outside this memo.
+    // We will define a placeholder updateData here and update the meta later.
+    const placeholderUpdateData = (rowIndex: number, columnId: keyof Participant, value: any) => {
+      console.error("[ParticipantSheet] updateData placeholder called. This should be replaced by useEffect.");
+    };
+
     return [
     {
       id: 'select',
@@ -478,13 +377,111 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableEditing: false,
     },
   ];
-  }, [onDeleteParticipant, updateData]); 
+  }, [onDeleteParticipant]); 
 
-  // Re-initialize table with stable columns
-  table.setOptions(prev => ({
-    ...prev,
+  const table = useReactTable({
+    data: sheetState.data,
     columns,
-  }));
+    columnResizeMode,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      globalFilter,
+      rowSelection,
+    },
+    initialState: {
+      columnPinning: {
+        left: ['select', 'full_name', 'email'],
+      },
+    },
+    meta: {
+      updateData: (rowIndex: number, columnId: keyof Participant, value: any) => {
+        // Placeholder, will be updated in useEffect below
+      },
+      setEditingCell: setEditingCell,
+      editingCell: editingCell,
+    }
+  });
+
+  const selectedRows = table.getSelectedRowModel().rows;
+  const isBulkEditing = selectedRows.length > 0;
+  
+  const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
+    const row = dataRef.current[rowIndex];
+    const oldValue = row[columnId];
+    
+    if (oldValue === value) {
+      console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
+      return;
+    }
+
+    // Check if the current row is selected AND if more than one row is selected
+    const isRowSelected = table.getRow(row.id).getIsSelected();
+    const isMultiSelected = selectedRows.length > 1;
+    const isBulkAction = isRowSelected && isMultiSelected;
+
+    const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
+    const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
+    
+    const updateStartTime = performance.now();
+    
+    // 1. Optimistic Update (Apply change to all affected rows in local state)
+    const newData = dataRef.current.map(p => {
+      if (rowIdsToUpdate.includes(p.id)) {
+        return { ...p, [columnId]: value };
+      }
+      return p;
+    });
+    dispatch({ type: 'UPDATE_DATA', payload: newData });
+    toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
+    console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
+
+    // 2. Background Sync (Trigger API call for each affected row)
+    const updates = rowsToUpdate.map(r => 
+      onUpdateParticipant(r.id, { [columnId]: value })
+        .catch((error) => {
+          // 3. Rollback on Error (Log and rely on undo/refresh)
+          console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
+          toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
+        })
+    );
+    
+    Promise.all(updates).finally(() => {
+      const duration = performance.now() - updateStartTime;
+      console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
+    });
+  }, [onUpdateParticipant, dispatch, selectedRows.length, table]); // IMPORTANT: Include table in dependencies
+
+  // Update table meta with the stable updateData function
+  useEffect(() => {
+    table.options.meta = {
+      ...table.options.meta,
+      updateData: updateData,
+    };
+  }, [updateData, table]);
+
+
+  const handleAddRow = async () => {
+    console.log("[ParticipantSheet] Initiating Add Row.");
+    const newParticipant: Partial<Participant> = {
+      full_name: "New Participant",
+      email: "",
+      registration_status: "not_sent",
+      payment_status: "not_paid",
+      attendance_status: "interested",
+      source: "manual",
+      accommodation_plan: "unknown",
+      transportation_plan: "unknown",
+      whatsapp_status: "not_invited",
+    };
+    await onAddParticipant(newParticipant);
+    console.log("[ParticipantSheet] Add Row finished.");
+  };
 
   // --- 6. Bulk Actions (Toolbar) ---
   const handleBulkUpdate = (columnId: keyof Participant, value: any) => {
