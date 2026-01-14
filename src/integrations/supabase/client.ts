@@ -16,6 +16,8 @@ if (!window.supabase) {
     auth: {
       // Disable storage lock to prevent race conditions during HMR/rapid initialization
       storageLock: false,
+      // Use a unique key to prevent conflicts
+      storageKey: 'dyad-supabase-auth-storage',
     }
   } as any);
 }

@@ -34,29 +34,35 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   useEffect(() => {
-    // 1. Initial session check (can be prone to race conditions)
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      checkAdminAccess(initialSession);
-      setLoading(false);
-    })
-    .catch(error => {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('[SessionContext] Initial session retrieval aborted.');
-      } else {
-        console.error('[SessionContext] Error fetching initial session:', error);
-      }
-      setLoading(false);
-    });
+    let isMounted = true;
+    
+    // 1. Manual URL hash processing (Fallback for redirects)
+    const hash = window.location.hash;
+    if (hash.includes('access_token')) {
+      console.log('[SessionContext] Found access token in hash. Attempting to set session.');
+      // This call tells Supabase to process the hash and store the session.
+      // We don't need the result, as onAuthStateChange will fire next.
+      supabase.auth.getSession().catch(e => {
+        if (e instanceof Error && e.name === 'AbortError') {
+          console.warn('[SessionContext] Manual getSession aborted during hash processing.');
+        } else {
+          console.error('[SessionContext] Error during manual hash processing:', e);
+        }
+      });
+      // Clean up the hash immediately after processing is initiated
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-    // 2. Listen for auth changes (more reliable for redirects)
+    // 2. Listen for auth changes (Primary mechanism)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      
       console.log(`[SessionContext] Auth state change: ${event}`);
       
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         setSession(session);
         const allowed = checkAdminAccess(session);
-        setLoading(false); // Ensure loading is false after session is set
+        setLoading(false);
         
         if (event === 'SIGNED_IN') {
           const email = session?.user?.email?.toLowerCase();
@@ -71,16 +77,15 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsAdmin(false);
         setLoading(false);
         toast.success('Signed out successfully');
-      } else if (event === 'TOKEN_REFRESHED') {
+      } else if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         setSession(session);
-        console.log('[Session] Token refreshed');
-      } else if (event === 'USER_UPDATED') {
-        setSession(session);
-        console.log('[Session] User updated');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
