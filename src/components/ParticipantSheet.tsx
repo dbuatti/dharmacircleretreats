@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useReducer, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -8,7 +8,6 @@ import {
   useReactTable,
   getSortedRowModel,
   SortingState,
-  ColumnResizeMode,
   getFilteredRowModel,
   RowSelectionState,
 } from "@tanstack/react-table";
@@ -17,15 +16,14 @@ import { cn } from "@/lib/utils";
 import { EditableTextCell } from "./sheet/EditableTextCell";
 import { SelectCell } from "./sheet/SelectCell";
 import { DietaryCell } from "./sheet/DietaryCell";
-import { CellEditorWrapper } from "./sheet/CellEditorWrapper"; // Import the new wrapper
+import { CellEditorWrapper } from "./sheet/CellEditorWrapper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, Search, Filter, Plus, Trash2, Undo2, Redo2, CheckCircle2, Tag, Users } from "lucide-react";
+import { ArrowUpDown, Search, Filter, Plus, Trash2, CheckCircle2, Tag, Users } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
 
-// --- 1. Options Definitions ---
+// --- Options Definitions ---
 interface SelectOption {
   value: string;
   label: string;
@@ -67,58 +65,7 @@ const REGISTRATION_OPTIONS: SelectOption[] = [
   { value: "confirmed", label: "Confirmed", badgeClass: "bg-green-100 text-green-800" },
 ];
 
-// --- 2. Undo/Redo State Management ---
-
-interface SheetState {
-  data: Participant[];
-  history: Participant[][];
-  historyIndex: number;
-}
-
-type SheetAction = 
-  | { type: 'UPDATE_DATA', payload: Participant[] }
-  | { type: 'UNDO' }
-  | { type: 'REDO' };
-
-const MAX_HISTORY = 10;
-
-const sheetReducer = (state: SheetState, action: SheetAction): SheetState => {
-  console.log(`[ParticipantSheet] Reducer action: ${action.type}`);
-  switch (action.type) {
-    case 'UPDATE_DATA':
-      if (JSON.stringify(action.payload) === JSON.stringify(state.data)) {
-        return state;
-      }
-      
-      const newHistory = state.history.slice(0, state.historyIndex + 1);
-      newHistory.push(state.data);
-      
-      return {
-        data: action.payload,
-        history: newHistory.slice(-MAX_HISTORY),
-        historyIndex: newHistory.length - 1,
-      };
-    case 'UNDO':
-      if (state.historyIndex < 0) return state;
-      return {
-        ...state,
-        data: state.history[state.historyIndex],
-        historyIndex: state.historyIndex - 1,
-      };
-    case 'REDO':
-      if (state.historyIndex >= state.history.length - 1) return state;
-      return {
-        ...state,
-        data: state.history[state.historyIndex + 1],
-        historyIndex: state.historyIndex + 1,
-      };
-    default:
-      return state;
-  }
-};
-
-// --- 3. Component Props and Setup ---
-
+// --- Component Props ---
 interface ParticipantSheetProps {
   participants: Participant[];
   onUpdateParticipant: (id: string, updates: Partial<Participant>) => Promise<void>;
@@ -127,262 +74,215 @@ interface ParticipantSheetProps {
 }
 
 export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
-  participants: initialParticipants,
+  participants,
   onUpdateParticipant,
   onDeleteParticipant,
   onAddParticipant,
 }) => {
-  const renderStartTime = performance.now();
-  const [sheetState, dispatch] = useReducer(sheetReducer, {
-    data: initialParticipants,
-    history: [],
-    historyIndex: -1,
-  });
-  
-  // Ref to hold the latest data state for stable callbacks
-  const dataRef = useRef(sheetState.data);
-  useEffect(() => {
-    dataRef.current = sheetState.data;
-  }, [sheetState.data]);
-
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnResizeMode, setColumnResizeMode] = useState<ColumnResizeMode>('onChange');
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
 
-  // Sync external data changes (e.g., from subscription)
-  useEffect(() => {
-    console.log("[ParticipantSheet] Initial/External data sync detected.");
-    dispatch({ type: 'UPDATE_DATA', payload: initialParticipants });
-  }, [initialParticipants]);
-
-  // --- 4. Data Manipulation and Optimistic Updates ---
-
-  // Define columns first so table can be initialized
-  type ParticipantColumnDef = ColumnDef<Participant> & {
-    enableEditing?: boolean;
-  };
-
-  const columns = useMemo<ParticipantColumnDef[]>(() => {
-    console.log("[ParticipantSheet] Recalculating Column Definitions (useMemo).");
-    // We define columns here, but the updateData function needs to be stable and defined outside this memo.
-    // We will define a placeholder updateData here and update the meta later.
-    const placeholderUpdateData = (rowIndex: number, columnId: keyof Participant, value: any) => {
-      console.error("[ParticipantSheet] updateData placeholder called. This should be replaced by useEffect.");
-    };
-
+  // --- Column Definitions ---
+  const columns = useMemo<ColumnDef<Participant>[]>(() => {
     return [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <input
-          type="checkbox"
-          checked={table.getIsAllRowsSelected()}
-          onChange={table.getToggleAllRowsSelectedHandler()}
-          className="h-4 w-4 rounded border-gray-300 text-[#1e2a5e] focus:ring-[#1e2a5e]"
-        />
-      ),
-      cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          className="h-4 w-4 rounded border-gray-300 text-[#1e2a5e] focus:ring-[#1e2a5e]"
-        />
-      ),
-      size: 30,
-      enableResizing: false,
-      enableSorting: false,
-      enableEditing: false,
-      meta: {
-        freeze: true,
-      }
-    },
-    {
-      accessorKey: "full_name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="h-full w-full justify-start px-2 text-xs uppercase tracking-widest font-semibold text-[#1e2a5e] hover:bg-gray-100"
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      ),
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={EditableTextCell}
-          className="font-medium"
-        />
-      ),
-      size: 180,
-      meta: {
-        freeze: true,
-      }
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={EditableTextCell}
-          className="text-gray-600"
-        />
-      ),
-      size: 200,
-      meta: {
-        freeze: true,
-      }
-    },
-    {
-      accessorKey: "dietary_requirements",
-      header: "Dietary",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={DietaryCell}
-        />
-      ),
-      size: 250,
-    },
-    {
-      accessorKey: "accommodation_plan",
-      header: "Accommodation",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={SelectCell}
-          options={ACCOMMODATION_OPTIONS}
-        />
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "transportation_plan",
-      header: "Transport",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={SelectCell}
-          options={TRANSPORTATION_OPTIONS}
-        />
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "eta",
-      header: "ETA",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={EditableTextCell}
-          className="text-gray-700"
-        />
-      ),
-      size: 120,
-    },
-    {
-      accessorKey: "notes",
-      header: "Other Info / Notes",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={EditableTextCell}
-          className="text-gray-500 italic"
-        />
-      ),
-      size: 300,
-    },
-    {
-      accessorKey: "payment_status",
-      header: "Payment",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={SelectCell}
-          options={PAYMENT_OPTIONS}
-        />
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "whatsapp_status",
-      header: "WhatsApp Group",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={SelectCell}
-          options={WHATSAPP_OPTIONS}
-        />
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "registration_status",
-      header: "Reg Status",
-      cell: (props) => (
-        <CellEditorWrapper
-          cellContext={props}
-          EditorComponent={SelectCell}
-          options={REGISTRATION_OPTIONS}
-        />
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "source",
-      header: "Source",
-      cell: ({ getValue }) => (
-        <div className="px-2 text-xs text-gray-500">
-          {getValue() as string || 'N/A'}
-        </div>
-      ),
-      size: 100,
-      enableEditing: false,
-    },
-    {
-      accessorKey: "created_at",
-      header: "Created",
-      cell: ({ getValue }) => (
-        <div className="px-2 text-xs text-gray-500">
-          {getValue() ? format(getValue() as Date, 'MMM d, yy') : 'N/A'}
-        </div>
-      ),
-      size: 100,
-      enableEditing: false,
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex justify-end px-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={() => onDeleteParticipant(row.original.id)}
-            title="Delete participant"
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <input
+            type="checkbox"
+            checked={table.getIsAllRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+            className="h-4 w-4 rounded border-gray-300 text-[#1e2a5e] focus:ring-[#1e2a5e]"
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            className="h-4 w-4 rounded border-gray-300 text-[#1e2a5e] focus:ring-[#1e2a5e]"
+          />
+        ),
+        size: 30,
+        enableResizing: false,
+        enableSorting: false,
+      },
+      {
+        accessorKey: "full_name",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-full w-full justify-start px-2 text-xs uppercase tracking-widest font-semibold text-[#1e2a5e] hover:bg-gray-100"
           >
-            <Trash2 className="w-4 h-4" />
+            Name
+            <ArrowUpDown className="ml-2 h-3 w-3" />
           </Button>
-        </div>
-      ),
-      size: 80,
-      enableResizing: false,
-      enableSorting: false,
-      enableEditing: false,
-    },
-  ];
-  }, [onDeleteParticipant]); 
+        ),
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={EditableTextCell}
+            className="font-medium"
+          />
+        ),
+        size: 180,
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={EditableTextCell}
+            className="text-gray-600"
+          />
+        ),
+        size: 200,
+      },
+      {
+        accessorKey: "dietary_requirements",
+        header: "Dietary",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={DietaryCell}
+          />
+        ),
+        size: 250,
+      },
+      {
+        accessorKey: "accommodation_plan",
+        header: "Accommodation",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={SelectCell}
+            options={ACCOMMODATION_OPTIONS}
+          />
+        ),
+        size: 150,
+      },
+      {
+        accessorKey: "transportation_plan",
+        header: "Transport",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={SelectCell}
+            options={TRANSPORTATION_OPTIONS}
+          />
+        ),
+        size: 150,
+      },
+      {
+        accessorKey: "eta",
+        header: "ETA",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={EditableTextCell}
+            className="text-gray-700"
+          />
+        ),
+        size: 120,
+      },
+      {
+        accessorKey: "notes",
+        header: "Other Info / Notes",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={EditableTextCell}
+            className="text-gray-500 italic"
+          />
+        ),
+        size: 300,
+      },
+      {
+        accessorKey: "payment_status",
+        header: "Payment",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={SelectCell}
+            options={PAYMENT_OPTIONS}
+          />
+        ),
+        size: 150,
+      },
+      {
+        accessorKey: "whatsapp_status",
+        header: "WhatsApp Group",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={SelectCell}
+            options={WHATSAPP_OPTIONS}
+          />
+        ),
+        size: 150,
+      },
+      {
+        accessorKey: "registration_status",
+        header: "Reg Status",
+        cell: (props) => (
+          <CellEditorWrapper
+            cellContext={props}
+            EditorComponent={SelectCell}
+            options={REGISTRATION_OPTIONS}
+          />
+        ),
+        size: 150,
+      },
+      {
+        accessorKey: "source",
+        header: "Source",
+        cell: ({ getValue }) => (
+          <div className="px-2 text-xs text-gray-500">
+            {getValue() as string || 'N/A'}
+          </div>
+        ),
+        size: 100,
+      },
+      {
+        accessorKey: "created_at",
+        header: "Created",
+        cell: ({ getValue }) => (
+          <div className="px-2 text-xs text-gray-500">
+            {getValue() ? format(getValue() as Date, 'MMM d, yy') : 'N/A'}
+          </div>
+        ),
+        size: 100,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex justify-end px-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => onDeleteParticipant(row.original.id)}
+              title="Delete participant"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        ),
+        size: 80,
+        enableResizing: false,
+        enableSorting: false,
+      },
+    ];
+  }, [onDeleteParticipant]);
 
   const table = useReactTable({
-    data: sheetState.data,
+    data: participants,
     columns,
-    columnResizeMode,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -400,8 +300,41 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       },
     },
     meta: {
-      updateData: (rowIndex: number, columnId: keyof Participant, value: any) => {
-        // Placeholder, will be updated in useEffect below
+      updateData: async (rowIndex: number, columnId: keyof Participant, value: any) => {
+        const row = participants[rowIndex];
+        if (!row) return;
+
+        const isRowSelected = table.getRow(row.id).getIsSelected();
+        const isMultiSelected = table.getSelectedRowModel().rows.length > 1;
+        const isBulkAction = isRowSelected && isMultiSelected;
+
+        const rowsToUpdate = isBulkAction 
+          ? table.getSelectedRowModel().rows.map(r => r.original) 
+          : [row];
+        
+        console.log(`[ParticipantSheet] Saving ${rowsToUpdate.length} row(s) for ${columnId}: ${value}`);
+        
+        // Show loading toast
+        const toastId = toast.loading(`Saving ${rowsToUpdate.length > 1 ? rowsToUpdate.length + ' changes' : 'change'}...`);
+
+        try {
+          const updates = rowsToUpdate.map(r => 
+            onUpdateParticipant(r.id, { [columnId]: value })
+          );
+          
+          await Promise.all(updates);
+          
+          toast.success(`${rowsToUpdate.length > 1 ? rowsToUpdate.length + ' changes' : 'Change'} saved`);
+        } catch (error) {
+          console.error("Failed to save changes:", error);
+          toast.error("Failed to save changes");
+        } finally {
+          toast.dismiss(toastId);
+          // Clear selection after bulk action
+          if (isBulkAction) {
+            setRowSelection({});
+          }
+        }
       },
       setEditingCell: setEditingCell,
       editingCell: editingCell,
@@ -410,73 +343,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   const selectedRows = table.getSelectedRowModel().rows;
   const isBulkEditing = selectedRows.length > 0;
-  
-  const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
-    console.log(`[ParticipantSheet] --- START updateData for column ${columnId} ---`);
-    try {
-      const row = dataRef.current[rowIndex];
-      const oldValue = row[columnId];
-      
-      if (oldValue === value) {
-        console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
-        return;
-      }
-
-      // Check if the current row is selected AND if more than one row is selected
-      const isRowSelected = table.getRow(row.id).getIsSelected();
-      const isMultiSelected = selectedRows.length > 1;
-      const isBulkAction = isRowSelected && isMultiSelected;
-
-      const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
-      const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
-      
-      console.log(`[ParticipantSheet] Update triggered. Target rows: ${rowsToUpdate.length}. Bulk: ${isBulkAction}. Value: ${value}`);
-      
-      const updateStartTime = performance.now();
-      
-      // 1. Optimistic Update (Apply change to all affected rows in local state)
-      const newData = dataRef.current.map(p => {
-        if (rowIdsToUpdate.includes(p.id)) {
-          return { ...p, [columnId]: value };
-        }
-        return p;
-      });
-      dispatch({ type: 'UPDATE_DATA', payload: newData });
-      toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
-      console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
-
-      // 2. Background Sync (Trigger API call for each affected row)
-      const updates = rowsToUpdate.map(r => 
-        onUpdateParticipant(r.id, { [columnId]: value })
-          .catch((error) => {
-            // 3. Rollback on Error (Log and rely on undo/refresh)
-            console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
-            toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
-          })
-      );
-      
-      Promise.all(updates).finally(() => {
-        const duration = performance.now() - updateStartTime;
-        console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
-      });
-    } catch (e) {
-      console.error("[ParticipantSheet] CRITICAL ERROR in updateData:", e);
-      toast.error("A critical error occurred during data update.");
-    }
-    console.log(`[ParticipantSheet] --- END updateData ---`);
-  }, [onUpdateParticipant, dispatch, selectedRows.length, table]); // IMPORTANT: Include table in dependencies
-
-  // Update table meta with the stable updateData function
-  useEffect(() => {
-    table.options.meta = {
-      ...table.options.meta,
-      updateData: updateData,
-    };
-  }, [updateData, table]);
-
 
   const handleAddRow = async () => {
-    console.log("[ParticipantSheet] Initiating Add Row.");
     const newParticipant: Partial<Participant> = {
       full_name: "New Participant",
       email: "",
@@ -489,62 +357,54 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       whatsapp_status: "not_invited",
     };
     await onAddParticipant(newParticipant);
-    console.log("[ParticipantSheet] Add Row finished.");
   };
 
-  // --- 6. Bulk Actions (Toolbar) ---
-  const handleBulkUpdate = (columnId: keyof Participant, value: any) => {
-    const bulkStartTime = performance.now();
+  const handleBulkUpdate = async (columnId: keyof Participant, value: any) => {
     if (!isBulkEditing) return;
     
     const selectedIds = selectedRows.map(row => row.original.id);
-    
-    // Optimistic update for all selected rows
-    const newData = sheetState.data.map(p => 
-      selectedIds.includes(p.id) ? { ...p, [columnId]: value } : p
-    );
-    dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(`${selectedRows.length} participants updated (syncing...)`);
+    const toastId = toast.loading(`Updating ${selectedIds.length} participants...`);
 
-    // Background sync for each selected row
-    selectedIds.forEach(id => {
-      onUpdateParticipant(id, { [columnId]: value })
-        .catch((error) => {
-          console.error(`[ParticipantSheet] Bulk update failed for row ${id.substring(0, 4)}. Error:`, error);
-          toast.error(`Bulk update failed for some rows. Please undo or refresh.`);
-        });
-    });
-    setRowSelection({}); // Clear selection after bulk action
-    const duration = performance.now() - bulkStartTime;
-    console.log(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows): ${duration.toFixed(3)} ms`);
+    try {
+      const updates = selectedIds.map(id => 
+        onUpdateParticipant(id, { [columnId]: value })
+      );
+      await Promise.all(updates);
+      toast.success(`${selectedIds.length} participants updated`);
+      setRowSelection({});
+    } catch (error) {
+      console.error("Bulk update failed:", error);
+      toast.error("Bulk update failed");
+    } finally {
+      toast.dismiss(toastId);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const bulkStartTime = performance.now();
+  const handleBulkDelete = async () => {
     if (!isBulkEditing) return;
     if (!confirm(`Are you sure you want to delete ${selectedRows.length} participants?`)) return;
 
     const selectedIds = selectedRows.map(row => row.original.id);
-    
-    // Optimistic removal
-    const newData = sheetState.data.filter(p => !selectedIds.includes(p.id));
-    dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(`${selectedIds.length} participants deleted (syncing...)`);
+    const toastId = toast.loading(`Deleting ${selectedIds.length} participants...`);
 
-    // Background sync
-    selectedIds.forEach(id => {
-      onDeleteParticipant(id);
-    });
-    setRowSelection({});
-    const duration = performance.now() - bulkStartTime;
-    console.log(`[ParticipantSheet] Bulk Delete (${selectedIds.length} rows): ${duration.toFixed(3)} ms`);
+    try {
+      const deletions = selectedIds.map(id => onDeleteParticipant(id));
+      await Promise.all(deletions);
+      toast.success(`${selectedIds.length} participants deleted`);
+      setRowSelection({});
+    } catch (error) {
+      console.error("Bulk delete failed:", error);
+      toast.error("Bulk delete failed");
+    } finally {
+      toast.dismiss(toastId);
+    }
   };
 
-  // --- 7. Totals Calculation ---
-  const totalParticipants = sheetState.data.length;
-  const confirmedCount = sheetState.data.filter(p => p.attendance_status === 'confirmed').length;
-  const paidCount = sheetState.data.filter(p => p.payment_status === 'paid_in_full').length;
-  const dietaryCounts = sheetState.data.reduce((acc, p) => {
+  // --- Totals Calculation ---
+  const totalParticipants = participants.length;
+  const confirmedCount = participants.filter(p => p.attendance_status === 'confirmed').length;
+  const paidCount = participants.filter(p => p.payment_status === 'paid_in_full').length;
+  const dietaryCounts = participants.reduce((acc, p) => {
     if (p.dietary_requirements) {
       const parts = p.dietary_requirements.toLowerCase().split(',').map(s => s.trim());
       if (parts.includes('gf')) acc.gf++;
@@ -554,35 +414,9 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     return acc;
   }, { gf: 0, df: 0, other: 0 });
 
-  // --- 8. Keyboard Shortcuts (Basic Undo/Redo) ---
-  useEffect(() => {
-    console.log("[ParticipantSheet] Setting up keyboard shortcuts.");
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
-        event.preventDefault();
-        dispatch({ type: 'UNDO' });
-        toast.info('Undo action');
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key === 'y') {
-        event.preventDefault();
-        dispatch({ type: 'REDO' });
-        toast.info('Redo action');
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      console.log("[ParticipantSheet] Cleaning up keyboard shortcuts.");
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  const renderDuration = performance.now() - renderStartTime;
-  console.log(`[ParticipantSheet] Render Cycle: ${renderDuration.toFixed(3)} ms`);
-
   return (
     <div className="space-y-6">
-      {/* Top Toolbar: Search, Filter, Undo/Redo */}
+      {/* Top Toolbar */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -595,26 +429,6 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
         </div>
         
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="rounded-none text-[10px] uppercase tracking-widest text-gray-600"
-            onClick={() => dispatch({ type: 'UNDO' })}
-            disabled={sheetState.historyIndex < 0}
-          >
-            <Undo2 className="w-3 h-3 mr-2" />
-            Undo (Ctrl+Z)
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="rounded-none text-[10px] uppercase tracking-widest text-gray-600"
-            onClick={() => dispatch({ type: 'REDO' })}
-            disabled={sheetState.historyIndex >= sheetState.history.length - 1}
-          >
-            <Redo2 className="w-3 h-3 mr-2" />
-            Redo (Ctrl+Y)
-          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -743,10 +557,9 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
                       editingCell?.rowId === row.id && cell.column.getIsPinned() === 'left' && "bg-yellow-50",
                     )}
                     onDoubleClick={() => {
-                      const columnDef = cell.column.columnDef as ParticipantColumnDef;
+                      const columnDef = cell.column.columnDef as any;
                       if (columnDef.enableEditing !== false) {
                         setEditingCell({ rowId: row.id, columnId: cell.column.id });
-                        console.log(`[ParticipantSheet] Entering edit mode for cell: ${cell.column.id}`);
                       }
                     }}
                   >
