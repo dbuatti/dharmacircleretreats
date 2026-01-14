@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useReducer, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useReducer, useCallback, useEffect, useRef } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -138,6 +138,12 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     historyIndex: -1,
   });
   
+  // Ref to hold the latest data state for stable callbacks
+  const dataRef = useRef(sheetState.data);
+  useEffect(() => {
+    dataRef.current = sheetState.data;
+  }, [sheetState.data]);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnResizeMode, setColumnResizeMode] = useState<ColumnResizeMode>('onChange');
   const [globalFilter, setGlobalFilter] = useState('');
@@ -153,45 +159,63 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
   // --- 4. Data Manipulation and Optimistic Updates ---
 
   const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
-    console.time(`[ParticipantSheet] Cell Update: ${columnId}`);
-    const newData = [...sheetState.data];
-    const row = newData[rowIndex];
+    const rowIdShort = dataRef.current[rowIndex].id.substring(0, 4);
+    const timerName = `[ParticipantSheet] Cell Update: ${columnId}-${rowIdShort}`;
+    
+    // Check if timer already exists (due to rapid interaction)
+    try {
+      console.time(timerName);
+    } catch (e) {
+      console.warn(`[ParticipantSheet] Timer ${timerName} already running. Skipping start.`);
+    }
+    
+    const currentData = dataRef.current;
+    const row = currentData[rowIndex];
     const oldValue = row[columnId];
     
     if (oldValue === value) {
       console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
+      try { console.timeEnd(timerName); } catch (e) {}
       return;
     }
 
     // 1. Optimistic Update
+    const newData = [...currentData];
     newData[rowIndex] = {
       ...row,
       [columnId]: value,
     };
     dispatch({ type: 'UPDATE_DATA', payload: newData });
     toast.success("Cell updated (syncing...)");
-    console.log(`[ParticipantSheet] Optimistic update applied for row ${row.id.substring(0, 4)}.`);
+    console.log(`[ParticipantSheet] Optimistic update applied for row ${rowIdShort}.`);
 
     // 2. Background Sync
     onUpdateParticipant(row.id, { [columnId]: value })
       .then(() => {
-        console.log(`[ParticipantSheet] Background sync successful for row ${row.id.substring(0, 4)}.`);
+        console.log(`[ParticipantSheet] Background sync successful for row ${rowIdShort}.`);
       })
       .catch((error) => {
         // 3. Rollback on Error
-        const rolledBackData = [...sheetState.data];
-        rolledBackData[rowIndex] = {
-          ...row,
-          [columnId]: oldValue, // Revert to old value
-        };
-        dispatch({ type: 'UPDATE_DATA', payload: rolledBackData });
-        toast.error("Update failed. Rolled back changes.");
-        console.error("[ParticipantSheet] Update failed, rolling back:", error);
+        const rolledBackData = [...dataRef.current];
+        // Find the index again in case the array order changed during the async operation
+        const rollbackIndex = rolledBackData.findIndex(p => p.id === row.id);
+        
+        if (rollbackIndex !== -1) {
+            rolledBackData[rollbackIndex] = {
+                ...row,
+                [columnId]: oldValue, // Revert to old value
+            };
+            dispatch({ type: 'UPDATE_DATA', payload: rolledBackData });
+            toast.error("Update failed. Rolled back changes.");
+            console.error("[ParticipantSheet] Update failed, rolling back:", error);
+        } else {
+            console.warn("[ParticipantSheet] Could not find row for rollback. Data might be inconsistent.");
+        }
       })
       .finally(() => {
-        console.timeEnd(`[ParticipantSheet] Cell Update: ${columnId}`);
+        try { console.timeEnd(timerName); } catch (e) {}
       });
-  }, [sheetState.data, onUpdateParticipant]);
+  }, [onUpdateParticipant, dispatch]); // Now stable!
 
   const handleAddRow = async () => {
     console.log("[ParticipantSheet] Initiating Add Row.");
@@ -464,7 +488,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableEditing: false,
     },
   ];
-  }, [updateData, editingCell, onDeleteParticipant]);
+  }, [updateData, editingCell, onDeleteParticipant]); // updateData is now stable!
 
   const table = useReactTable({
     data: sheetState.data,
@@ -528,7 +552,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     // Optimistic removal
     const newData = sheetState.data.filter(p => !selectedIds.includes(p.id));
     dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(`${selectedRows.length} participants deleted (syncing...)`);
+    toast.success(`${selectedIds.length} participants deleted (syncing...)`);
 
     // Background sync
     selectedIds.forEach(id => {
