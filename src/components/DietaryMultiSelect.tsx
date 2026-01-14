@@ -47,27 +47,21 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
     const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
 
     if (value) {
-      // Split and trim parts, keeping original case for custom text extraction
       const parts = value.split(',').map(p => p.trim()).filter(p => p);
       
       parts.forEach(part => {
         const lowerPart = part.toLowerCase();
         
         if (predefinedValues.includes(lowerPart) && !currentSelected.includes(lowerPart)) {
-          // Case 1: Predefined option (e.g., 'gf', 'vegan')
           currentSelected.push(lowerPart);
         } else if (lowerPart.startsWith('other:')) {
-          // Case 2: 'other: custom text' format
           if (!currentSelected.includes('other')) {
             currentSelected.push('other');
           }
-          // Extract text after 'other:'
           currentCustomText = part.substring('other:'.length).trim();
         }
       });
       
-      // Fallback: If 'other' is selected but no 'other:' prefix was found, 
-      // check for any non-predefined parts that might be the custom text (e.g., old format or simple entry)
       if (currentSelected.includes('other') && !currentCustomText) {
           const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p.toLowerCase()));
           if (nonPredefinedParts.length > 0) {
@@ -75,8 +69,6 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
           }
       }
     }
-    
-    // Optimization: Only update state if the parsed value is different from the current state
     
     const currentSelectedString = JSON.stringify(currentSelected.sort());
     const localSelectedString = JSON.stringify(selectedValues.sort());
@@ -89,11 +81,10 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
         setCustomText(currentCustomText);
     }
 
-  }, [value]); // Dependency on value only
+  }, [value]);
 
   // Effect 2: Sync State -> Prop
   useEffect(() => {
-    // Combine selected values and custom text into the output string
     let outputParts = selectedValues.filter(v => v !== 'other');
     
     if (selectedValues.includes("other")) {
@@ -106,7 +97,6 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
 
     const output = outputParts.join(', ');
 
-    // Only call onChange if the derived output is different from the current prop value
     if (output !== value) {
         onChange(output);
     }
@@ -130,14 +120,14 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   }).join(', ');
 
   return (
-    <div className="space-y-2">
+    <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between rounded-none border-0 border-b border-gray-200 px-0 h-10 focus:ring-0 focus:border-[#1e2a5e] bg-transparent text-left"
+            className="w-full justify-between rounded-none border-0 border-b border-gray-200 px-0 h-full min-h-[36px] focus:ring-0 focus:border-[#1e2a5e] bg-transparent text-left"
             disabled={disabled}
           >
             <div className="flex items-center gap-2 truncate">
@@ -164,7 +154,7 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
                       onCheckedChange={() => handleSelect(option.value)}
                       id={`dietary-${option.value}`}
                     />
-                    <Label htmlFor={`dietary-${option.value}`} className="flex-1 cursor-pointer">
+                    <Label htmlFor={`dietary-${option.value}`} className="flex-1 cursor-pointer text-sm">
                       {option.label}
                     </Label>
                     <Check
@@ -178,24 +168,21 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
               ))}
             </CommandGroup>
           </Command>
+          
+          {selectedValues.includes("other") && (
+            <div className="p-2 border-t">
+              <Input
+                id="custom-dietary"
+                placeholder="Specify 'Other' requirements..."
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                className="h-8 text-sm"
+                disabled={disabled}
+              />
+            </div>
+          )}
         </PopoverContent>
       </Popover>
-      
-      {selectedValues.includes("other") && (
-        <div className="space-y-1 pt-2">
-          <Label htmlFor="custom-dietary" className="text-[10px] uppercase tracking-widest text-gray-500">
-            Specify "Other"
-          </Label>
-          <Input
-            id="custom-dietary"
-            placeholder="e.g., Nut allergy, Low FODMAP"
-            value={customText}
-            onChange={(e) => setCustomText(e.target.value)}
-            className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
-            disabled={disabled}
-          />
-        </div>
-      )}
     </div>
   );
 };

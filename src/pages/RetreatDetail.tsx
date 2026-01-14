@@ -8,6 +8,7 @@ import { useSession } from "@/contexts/SessionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { ParticipantSheet } from "@/components/ParticipantSheet";
 
 const RetreatDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,16 +49,19 @@ const RetreatDetail = () => {
         </Button>
       </div>
       <RetreatDashboard
-        retreat={retreat as any}
+        retreat={retreat}
         participants={participants}
-        onAddParticipant={addParticipant}
-        onUpdateParticipant={updateParticipant}
-        onDeleteParticipant={deleteParticipant}
         onUpdateRetreat={updateRetreat}
         onCopyWhatsApp={copyWhatsApp}
         onLogout={handleLogout}
-        userEmail={session?.user?.email}
-      />
+      >
+        <ParticipantSheet
+          participants={participants}
+          onUpdateParticipant={updateParticipant}
+          onDeleteParticipant={deleteParticipant}
+          onAddParticipant={addParticipant}
+        />
+      </RetreatDashboard>
     </div>
   );
 };
