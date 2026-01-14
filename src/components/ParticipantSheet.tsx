@@ -336,7 +336,7 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
           toast.success(`${rowsToUpdate.length > 1 ? rowsToUpdate.length + ' changes' : 'Change'} saved`);
         } catch (error) {
           console.error("Failed to save changes:", error);
-          toast.error("Failed to save changes");
+          toast.error("Bulk update failed");
         } finally {
           setSavingCells(prev => {
             const newSet = new Set(prev);
@@ -560,7 +560,7 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
                   "flex border-b border-gray-100 transition-colors group",
                   index % 2 === 1 ? "bg-gray-50/50" : "bg-white",
                   row.getIsSelected() && "bg-blue-50 hover:bg-blue-100",
-                  editingCell?.rowId === row.id && "bg-yellow-50 hover:bg-yellow-100"
+                  editingCell?.rowId === row.original.id && "bg-yellow-50 hover:bg-yellow-100"
                 )}
               >
                 {row.getVisibleCells().map(cell => (
@@ -579,12 +579,12 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
                       cell.column.id === 'email' && 'left-[210px]',
                       cell.column.getIsPinned() === 'left' && (index % 2 === 1 ? "bg-gray-50/50" : "bg-white"),
                       row.getIsSelected() && cell.column.getIsPinned() === 'left' && "bg-blue-50",
-                      editingCell?.rowId === row.id && cell.column.getIsPinned() === 'left' && "bg-yellow-50",
+                      editingCell?.rowId === row.original.id && cell.column.getIsPinned() === 'left' && "bg-yellow-50",
                     )}
                     onDoubleClick={() => {
                       const columnDef = cell.column.columnDef as any;
                       if (columnDef.enableEditing !== false) {
-                        setEditingCell({ rowId: row.id, columnId: cell.column.id });
+                        setEditingCell({ rowId: row.original.id, columnId: cell.column.id });
                       }
                     }}
                   >
