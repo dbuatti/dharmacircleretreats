@@ -12,19 +12,16 @@ const Index = () => {
   const { session, loading } = useSession();
 
   useEffect(() => {
-    // Handle OAuth redirect messages and clean up hash
-    const hash = window.location.hash;
-    const hashParams = new URLSearchParams(hash.slice(1));
+    // Handle OAuth redirect messages
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const error = hashParams.get('error');
-    const accessToken = hashParams.get('access_token'); // Check for successful token
+    const errorDescription = hashParams.get('error_description');
 
     if (error) {
-      toast.error(hashParams.get('error_description') || 'Authentication error');
+      toast.error(errorDescription || 'Authentication error');
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
-    // NOTE: Removed manual hash cleanup (window.history.replaceState) to allow 
-    // SessionProvider's onAuthStateChange listener to process the session token first.
-    
   }, []);
 
   if (loading) {
@@ -33,6 +30,11 @@ const Index = () => {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e2a5e]"></div>
       </div>
     );
+  }
+
+  if (!session) {
+    navigate('/login');
+    return null;
   }
 
   return (

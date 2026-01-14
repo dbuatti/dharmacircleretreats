@@ -26,100 +26,44 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      checkAdminAccess(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      checkAdminAccess(session);
+      
+      // Handle specific auth events
+      if (event === 'SIGNED_IN') {
+        const email = session?.user?.email?.toLowerCase();
+        if (email && ALLOWED_ADMIN_EMAILS.includes(email)) {
+          toast.success('Welcome back! Admin access granted.');
+        } else if (email) {
+          toast.error('This account is not authorized for admin access.');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        toast.success('Signed out successfully');
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('[Session] Token refreshed');
+      } else if (event === 'USER_UPDATED') {
+        console.log('[Session] User updated');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const checkAdminAccess = (session: Session | null) => {
     const email = session?.user?.email?.toLowerCase();
     const allowed = email ? ALLOWED_ADMIN_EMAILS.includes(email) : false;
     setIsAdmin(allowed);
-    return allowed;
   };
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    // Clean up URL hash immediately if it contains auth tokens
-    // This prevents the hash from being processed again on page refresh
-    const cleanupHash = () => {
-      if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    };
-
-    // Listen for auth changes - this is the primary mechanism
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
-      
-      console.log(`[SessionContext] Auth state change: ${event}`, session ? 'Session found' : 'No session');
-      
-      // Handle all session-related events
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        setSession(session);
-        checkAdminAccess(session);
-        setLoading(false);
-        
-        // Show appropriate toast for sign-in
-        if (event === 'SIGNED_IN' && session?.user?.email) {
-          const email = session.user.email.toLowerCase();
-          if (ALLOWED_ADMIN_EMAILS.includes(email)) {
-            toast.success(`Welcome back, ${session.user.user_metadata?.full_name || 'Admin'}!`);
-          } else {
-            toast.error('Account not authorized for admin access.');
-          }
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setIsAdmin(false);
-        setLoading(false);
-        toast.success('Signed out successfully');
-      }
-    });
-
-    // Handle OAuth redirect flow
-    const handleOAuthRedirect = async () => {
-      const hash = window.location.hash;
-      
-      // If we have auth tokens in the hash, process them first
-      if (hash.includes('access_token') || hash.includes('error')) {
-        console.log('[SessionContext] Processing OAuth redirect from hash');
-        
-        // Let Supabase handle the hash processing
-        // The onAuthStateChange will fire with the correct session
-        // We just need to wait a bit for it to process
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Clean up the hash
-        cleanupHash();
-        
-        // Get the session after processing
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (currentSession && isMounted) {
-          setSession(currentSession);
-          checkAdminAccess(currentSession);
-          setLoading(false);
-          console.log('[SessionContext] OAuth session established');
-        } else {
-          // Session might still be processing, let the onAuthStateChange handle it
-          console.log('[SessionContext] OAuth session processing...');
-        }
-      } else {
-        // Normal page load - check for existing session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (currentSession && isMounted) {
-          setSession(currentSession);
-          checkAdminAccess(currentSession);
-        }
-        setLoading(false);
-      }
-    };
-
-    // Run the OAuth handler
-    handleOAuthRedirect();
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();

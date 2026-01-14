@@ -9,29 +9,16 @@ import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ALLOWED_ADMIN_EMAILS } from '@/contexts/SessionContext';
-import { Loader2 } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { session, loading } = useSession();
+  const { session } = useSession();
 
   useEffect(() => {
-    // If the session is established by SessionProvider (e.g., after OAuth redirect), navigate to home.
-    if (session && !loading) {
+    if (session) {
       navigate('/');
     }
-  }, [session, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc]">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-[#1e2a5e] mx-auto" />
-          <p className="text-gray-600 font-serif italic">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [session, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc] p-4">
