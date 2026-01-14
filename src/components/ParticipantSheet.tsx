@@ -197,9 +197,14 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     await onAddParticipant(newParticipant);
   };
 
+  // Define a custom ColumnDef type to include the non-standard 'enableEditing' property
+  type ParticipantColumnDef = ColumnDef<Participant> & {
+    enableEditing?: boolean;
+  };
+
   // --- 5. Column Definitions ---
 
-  const columns = useMemo<ColumnDef<Participant>[]>(() => [
+  const columns = useMemo<ParticipantColumnDef[]>(() => [
     {
       id: 'select',
       header: ({ table }) => (
@@ -221,6 +226,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       size: 30,
       enableResizing: false,
       enableSorting: false,
+      enableEditing: false,
       meta: {
         freeze: true,
       }
@@ -641,7 +647,6 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
                 {headerGroup.headers.map(header => (
                   <div
                     key={header.id}
-                    colSpan={header.colSpan}
                     style={{
                       width: header.getSize(),
                       minWidth: header.column.columnDef.minSize,
@@ -710,7 +715,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
                       editingCell?.rowId === row.id && cell.column.getIsPinned() === 'left' && "bg-yellow-50",
                     )}
                     onDoubleClick={() => {
-                      if (cell.column.getCanEdit()) {
+                      const columnDef = cell.column.columnDef as ParticipantColumnDef;
+                      if (columnDef.enableEditing !== false) {
                         setEditingCell({ rowId: row.id, columnId: cell.column.id });
                       }
                     }}
