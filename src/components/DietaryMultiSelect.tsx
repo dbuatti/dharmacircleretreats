@@ -42,8 +42,6 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
 
   // Effect 1: Sync Prop -> State (Robust Parsing)
   useEffect(() => {
-    console.log("[DietaryMultiSelect] Prop 'value' received:", value);
-    
     let currentSelected: string[] = [];
     let currentCustomText = "";
     const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
@@ -84,12 +82,10 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
     const localSelectedString = JSON.stringify(selectedValues.sort());
 
     if (currentSelectedString !== localSelectedString) {
-        console.log("[DietaryMultiSelect] Updating selectedValues from prop:", currentSelected);
         setSelectedValues(currentSelected);
     }
     
     if (currentCustomText !== customText) {
-        console.log("[DietaryMultiSelect] Updating customText from prop:", currentCustomText);
         setCustomText(currentCustomText);
     }
 
@@ -112,7 +108,6 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
 
     // Only call onChange if the derived output is different from the current prop value
     if (output !== value) {
-        console.log("[DietaryMultiSelect] Calling onChange with new output:", output);
         onChange(output);
     }
 
@@ -195,10 +190,7 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
             id="custom-dietary"
             placeholder="e.g., Nut allergy, Low FODMAP"
             value={customText}
-            onChange={(e) => {
-                console.log("[DietaryMultiSelect] Input change:", e.target.value);
-                setCustomText(e.target.value);
-            }}
+            onChange={(e) => setCustomText(e.target.value)}
             className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
             disabled={disabled}
           />
