@@ -83,8 +83,7 @@ export function useRetreatData(retreatId: string | undefined) {
       toast.error("Update failed");
       console.error("[useRetreatData] Update retreat error:", error);
     } else {
-      // Optimistic update is already handled by the real-time subscription, 
-      // but we update state here immediately for responsiveness if needed.
+      // Rely on real-time subscription to update state
       setRetreat(data);
       toast.success("Retreat updated");
     }
@@ -142,13 +141,9 @@ export function useRetreatData(retreatId: string | undefined) {
         throw new Error("Database update failed"); 
       }
 
-      // Optimistic update local state immediately
-      setParticipants(prev => prev.map(p => {
-        if (p.id === id) {
-          return { ...p, ...updates };
-        }
-        return p;
-      }));
+      // NOTE: Removed optimistic update here. We rely on the next render cycle 
+      // (triggered by setIsUpdating(false)) to reflect the change, which is acceptable 
+      // for this spreadsheet interface.
       
       console.log(`[useRetreatData] Participant ${id.substring(0, 4)} updated successfully`);
     } finally {
