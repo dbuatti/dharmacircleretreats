@@ -36,10 +36,7 @@ const Index = () => {
     );
   }
 
-  if (!session) {
-    navigate('/login');
-    return null;
-  }
+  // Removed redundant session check, relying on ProtectedRoute in App.tsx
 
   return (
     <div className="relative">
