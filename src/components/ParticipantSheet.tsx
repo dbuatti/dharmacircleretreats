@@ -345,10 +345,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
             newSet.delete(cellKey);
             return newSet;
           });
-          // Clear selection after bulk action
-          if (isBulkAction) {
-            setRowSelection({});
-          }
+          // NOTE: Removed automatic selection clearing here to allow sequential bulk updates.
         }
       },
       setEditingCell: setEditingCell,
@@ -386,7 +383,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       );
       await Promise.all(updates);
       toast.success(`${selectedIds.length} participants updated`);
-      setRowSelection({});
+      // We keep the selection active here to allow for sequential bulk actions.
     } catch (error) {
       console.error("Bulk update failed:", error);
       toast.error("Bulk update failed");
@@ -406,7 +403,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       const deletions = selectedIds.map(id => onDeleteParticipant(id));
       await Promise.all(deletions);
       toast.success(`${selectedIds.length} participants deleted`);
-      setRowSelection({});
+      setRowSelection({}); // Clear selection after deletion
     } catch (error) {
       console.error("Bulk delete failed:", error);
       toast.error("Bulk delete failed");
@@ -491,6 +488,15 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
             onClick={handleBulkDelete}
           >
             <Trash2 className="w-3 h-3 mr-2" /> Delete Selected
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="rounded-none text-[10px] uppercase tracking-widest text-gray-500 hover:bg-gray-100"
+            onClick={() => setRowSelection({})}
+          >
+            Clear Selection
           </Button>
         </div>
       )}
