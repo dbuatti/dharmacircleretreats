@@ -29,6 +29,9 @@ interface DietaryMultiSelectProps {
   value: string; // Comma-separated string of selected options + custom text
   onChange: (value: string) => void;
   disabled?: boolean;
+  // Props to make it controllable by parent (for table editing)
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Helper function to parse the comma-separated string into internal state structure
@@ -88,9 +91,15 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   value,
   onChange,
   disabled = false,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }) => {
-  const [open, setOpen] = useState(false);
+  // Internal state for Popover if not controlled externally
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const setOpen = controlledOnOpenChange || setUncontrolledOpen;
+
   // Derive state from the external value prop
   const { selectedValues, customText } = useMemo(() => parseValue(value), [value]);
 

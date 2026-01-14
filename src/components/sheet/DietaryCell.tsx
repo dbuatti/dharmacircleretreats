@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Participant } from "@/types";
 import { DietaryMultiSelect } from "../DietaryMultiSelect";
 import { Badge } from "@/components/ui/badge";
@@ -47,22 +47,52 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
   isEditing,
   setIsEditing,
 }) => {
-  const handleValueChange = (newValue: string) => {
-    // The DietaryMultiSelect is now fully controlled and only calls onChange when the value changes internally.
-    // We still need to check against initialValue to prevent unnecessary DB calls if the prop sync was delayed,
-    // but the primary loop prevention is now in the controlled component pattern.
-    if (newValue !== initialValue) {
-      onSave(rowId, columnId, newValue);
+  // Local state to hold value during editing
+  const [localValue, setLocalValue] = useState(initialValue);
+
+  // 1. Sync local state when initialValue changes (only when not editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalValue(initialValue);
+    }
+  }, [initialValue, isEditing]);
+
+  // 2. Handle saving when editing state changes from true to false
+  useEffect(() => {
+    if (!isEditing && localValue !== initialValue) {
+      console.log(`[DietaryCell] Saving change for ${columnId}: ${initialValue} -> ${localValue}`);
+      onSave(rowId, columnId, localValue);
+    }
+  }, [isEditing, localValue, initialValue, onSave, rowId, columnId]);
+
+  // 3. Handle Popover open/close state synchronization
+  const handleOpenChange = (open: boolean) => {
+    // If the popover is closing, set isEditing to false, which triggers the save via useEffect (step 2)
+    if (!open) {
+      setIsEditing(false);
     }
   };
 
+  // Display mode
+  if (!isEditing) {
+    return (
+      <div
+        className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm"
+        onClick={() => setIsEditing(true)}
+      >
+        {getDietaryBadges(initialValue)}
+      </div>
+    );
+  }
+
+  // Editing mode
   return (
-    <div
-      className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm"
-    >
+    <div className="h-full w-full flex items-center px-2 py-1 bg-white">
       <DietaryMultiSelect
-        value={initialValue}
-        onChange={handleValueChange}
+        value={localValue}
+        onChange={setLocalValue} // Update local state immediately
+        onOpenChange={handleOpenChange} // Control external editing state
+        open={isEditing} // Force open when editing
       />
     </div>
   );
