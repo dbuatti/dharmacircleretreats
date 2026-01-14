@@ -85,7 +85,7 @@ export const SelectCell: React.FC<SelectCellProps> = ({
   }
 
   // Display mode
-  const displayValue = options.find(o => o.value === initialValue)?.label || initialValue;
+  const displayValue = options.find(o => o.value === initialValue)?.label || initialValue || "";
   
   // Use badge display for status columns
   if (['payment_status', 'attendance_status', 'registration_status', 'whatsapp_status'].includes(columnId as string)) {
@@ -94,7 +94,7 @@ export const SelectCell: React.FC<SelectCellProps> = ({
         className="h-full w-full flex items-center px-2 py-1 cursor-pointer"
         onClick={() => setIsEditing(true)}
       >
-        {getStatusBadge(initialValue, options)}
+        {getStatusBadge(initialValue || "", options)}
       </div>
     );
   }
@@ -105,7 +105,7 @@ export const SelectCell: React.FC<SelectCellProps> = ({
       className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm capitalize"
       onClick={() => setIsEditing(true)}
     >
-      {displayValue.replace(/_/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+      {(displayValue as string).replace(/_/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
     </div>
   );
 };
