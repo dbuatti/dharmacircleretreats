@@ -12,16 +12,17 @@ export function useRetreatData(retreatId: string | undefined) {
 
   const fetchData = useCallback(async () => {
     if (!session || !retreatId) return;
-    console.time("[useRetreatData] Total Data Fetch Time");
+    const totalStartTime = performance.now();
     setLoading(true);
     try {
-      console.time("[useRetreatData] Fetch Retreat Details");
+      const retreatStartTime = performance.now();
       const { data: retreatData, error: retreatError } = await supabase
         .from('retreats')
         .select('*')
         .eq('id', retreatId)
         .single();
-      console.timeEnd("[useRetreatData] Fetch Retreat Details");
+      const retreatDuration = performance.now() - retreatStartTime;
+      console.log(`[useRetreatData] Fetch Retreat Details: ${retreatDuration.toFixed(3)} ms`);
 
       if (retreatError) {
         toast.error("Retreat not found");
@@ -30,13 +31,14 @@ export function useRetreatData(retreatId: string | undefined) {
       }
       setRetreat(retreatData);
 
-      console.time("[useRetreatData] Fetch Participants List");
+      const participantsStartTime = performance.now();
       const { data: partData, error: partError } = await supabase
         .from('participants')
         .select('*')
         .eq('retreat_id', retreatId)
         .order('created_at', { ascending: false });
-      console.timeEnd("[useRetreatData] Fetch Participants List");
+      const participantsDuration = performance.now() - participantsStartTime;
+      console.log(`[useRetreatData] Fetch Participants List: ${participantsDuration.toFixed(3)} ms`);
 
       if (partError) {
         setParticipants([]);
@@ -53,7 +55,8 @@ export function useRetreatData(retreatId: string | undefined) {
       console.error('[useRetreatData] General Fetch error:', error);
     } finally {
       setLoading(false);
-      console.timeEnd("[useRetreatData] Total Data Fetch Time");
+      const totalDuration = performance.now() - totalStartTime;
+      console.log(`[useRetreatData] Total Data Fetch Time: ${totalDuration.toFixed(3)} ms`);
     }
   }, [session, retreatId]);
 
@@ -85,9 +88,10 @@ export function useRetreatData(retreatId: string | undefined) {
   }, [fetchData, retreatId]);
 
   const updateRetreat = async (updates: Partial<Retreat>) => {
-    console.time("[useRetreatData] Update Retreat Details");
+    const startTime = performance.now();
     const { data, error } = await supabase.from('retreats').update(updates).eq('id', retreatId).select().single();
-    console.timeEnd("[useRetreatData] Update Retreat Details");
+    const duration = performance.now() - startTime;
+    console.log(`[useRetreatData] Update Retreat Details: ${duration.toFixed(3)} ms`);
     if (error) {
       toast.error("Update failed");
       console.error("[useRetreatData] Update retreat error:", error);
@@ -111,13 +115,14 @@ export function useRetreatData(retreatId: string | undefined) {
       added_by: session?.user.email
     };
 
-    console.time("[useRetreatData] Add Participant API Call");
+    const startTime = performance.now();
     const { data: newPart, error } = await supabase
       .from('participants')
       .insert([insertPayload])
       .select()
       .single();
-    console.timeEnd("[useRetreatData] Add Participant API Call");
+    const duration = performance.now() - startTime;
+    console.log(`[useRetreatData] Add Participant API Call: ${duration.toFixed(3)} ms`);
     
     if (error) {
       toast.error("Failed to add participant");
@@ -149,9 +154,10 @@ export function useRetreatData(retreatId: string | undefined) {
   };
 
   const deleteParticipant = async (id: string) => {
-    console.time(`[useRetreatData] Delete Participant ${id.substring(0, 4)} API Call`);
+    const startTime = performance.now();
     const { error } = await supabase.from('participants').delete().eq('id', id);
-    console.timeEnd(`[useRetreatData] Delete Participant ${id.substring(0, 4)} API Call`);
+    const duration = performance.now() - startTime;
+    console.log(`[useRetreatData] Delete Participant ${id.substring(0, 4)} API Call: ${duration.toFixed(3)} ms`);
     if (error) {
       toast.error("Delete failed");
       console.error("[useRetreatData] Delete participant error:", error);

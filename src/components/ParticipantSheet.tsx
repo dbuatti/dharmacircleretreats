@@ -132,7 +132,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
   onDeleteParticipant,
   onAddParticipant,
 }) => {
-  console.time("[ParticipantSheet] Render Cycle");
+  const renderStartTime = performance.now();
   const [sheetState, dispatch] = useReducer(sheetReducer, {
     data: initialParticipants,
     history: [],
@@ -161,14 +161,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
     const rowIdShort = dataRef.current[rowIndex].id.substring(0, 4);
-    const timerName = `[ParticipantSheet] Cell Update: ${columnId}-${rowIdShort}`;
-    
-    // Check if timer already exists (due to rapid interaction)
-    try {
-      console.time(timerName);
-    } catch (e) {
-      console.warn(`[ParticipantSheet] Timer ${timerName} already running. Skipping start.`);
-    }
+    const updateStartTime = performance.now();
     
     const currentData = dataRef.current;
     const row = currentData[rowIndex];
@@ -176,7 +169,6 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     
     if (oldValue === value) {
       console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
-      try { console.timeEnd(timerName); } catch (e) {}
       return;
     }
 
@@ -214,7 +206,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
         }
       })
       .finally(() => {
-        try { console.timeEnd(timerName); } catch (e) {}
+        const duration = performance.now() - updateStartTime;
+        console.log(`[ParticipantSheet] Cell Update: ${columnId}-${rowIdShort}: ${duration.toFixed(3)} ms`);
       });
   }, [onUpdateParticipant, dispatch]); // Now stable!
 
@@ -449,7 +442,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableEditing: false,
     },
   ];
-  }, [updateData, onDeleteParticipant]); // Removed editingCell dependency
+  }, [updateData, onDeleteParticipant]); 
 
   const table = useReactTable({
     data: sheetState.data,
@@ -483,7 +476,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 6. Bulk Actions ---
   const handleBulkUpdate = (columnId: keyof Participant, value: any) => {
-    console.time(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows)`);
+    const bulkStartTime = performance.now();
     if (!isBulkEditing) return;
     
     const selectedIds = selectedRows.map(row => row.original.id);
@@ -500,11 +493,12 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       onUpdateParticipant(id, { [columnId]: value });
     });
     setRowSelection({}); // Clear selection after bulk action
-    console.timeEnd(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows)`);
+    const duration = performance.now() - bulkStartTime;
+    console.log(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows): ${duration.toFixed(3)} ms`);
   };
 
   const handleBulkDelete = () => {
-    console.time(`[ParticipantSheet] Bulk Delete (${selectedRows.length} rows)`);
+    const bulkStartTime = performance.now();
     if (!isBulkEditing) return;
     if (!confirm(`Are you sure you want to delete ${selectedRows.length} participants?`)) return;
 
@@ -520,7 +514,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       onDeleteParticipant(id);
     });
     setRowSelection({});
-    console.timeEnd(`[ParticipantSheet] Bulk Delete (${selectedRows.length} rows)`);
+    const duration = performance.now() - bulkStartTime;
+    console.log(`[ParticipantSheet] Bulk Delete (${selectedIds.length} rows): ${duration.toFixed(3)} ms`);
   };
 
   // --- 7. Totals Calculation ---
@@ -560,7 +555,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     };
   }, []);
 
-  console.timeEnd("[ParticipantSheet] Render Cycle");
+  const renderDuration = performance.now() - renderStartTime;
+  console.log(`[ParticipantSheet] Render Cycle: ${renderDuration.toFixed(3)} ms`);
 
   return (
     <div className="space-y-6">
