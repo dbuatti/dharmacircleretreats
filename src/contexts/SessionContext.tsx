@@ -38,9 +38,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     // Clean up URL hash immediately if it contains auth tokens
     // This prevents the hash from being processed again on page refresh
-    if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    const cleanupHash = () => {
+      if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
 
     // Listen for auth changes - this is the primary mechanism
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -71,28 +73,47 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // Also check for existing session on mount (handles page refreshes)
-    const checkInitialSession = async () => {
-      try {
+    // Handle OAuth redirect flow
+    const handleOAuthRedirect = async () => {
+      const hash = window.location.hash;
+      
+      // If we have auth tokens in the hash, process them first
+      if (hash.includes('access_token') || hash.includes('error')) {
+        console.log('[SessionContext] Processing OAuth redirect from hash');
+        
+        // Let Supabase handle the hash processing
+        // The onAuthStateChange will fire with the correct session
+        // We just need to wait a bit for it to process
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Clean up the hash
+        cleanupHash();
+        
+        // Get the session after processing
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession && isMounted) {
+          setSession(currentSession);
+          checkAdminAccess(currentSession);
+          setLoading(false);
+          console.log('[SessionContext] OAuth session established');
+        } else {
+          // Session might still be processing, let the onAuthStateChange handle it
+          console.log('[SessionContext] OAuth session processing...');
+        }
+      } else {
+        // Normal page load - check for existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession && isMounted) {
           setSession(currentSession);
           checkAdminAccess(currentSession);
         }
-      } catch (error) {
-        console.error('[SessionContext] Error checking initial session:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
-    // Only check initial session if we're not in the middle of an OAuth flow
-    // The onAuthStateChange will handle OAuth redirects
-    if (!window.location.hash.includes('access_token')) {
-      checkInitialSession();
-    }
+    // Run the OAuth handler
+    handleOAuthRedirect();
 
     return () => {
       isMounted = false;
