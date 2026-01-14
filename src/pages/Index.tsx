@@ -12,14 +12,18 @@ const Index = () => {
   const { session, loading } = useSession();
 
   useEffect(() => {
-    // Handle OAuth redirect messages
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    // Handle OAuth redirect messages and clean up hash
+    const hash = window.location.hash;
+    const hashParams = new URLSearchParams(hash.slice(1));
     const error = hashParams.get('error');
-    const errorDescription = hashParams.get('error_description');
+    const accessToken = hashParams.get('access_token'); // Check for successful token
 
     if (error) {
-      toast.error(errorDescription || 'Authentication error');
-      // Clean up the URL
+      toast.error(hashParams.get('error_description') || 'Authentication error');
+    }
+    
+    // Clean up the URL if it contains auth parameters (error or success token)
+    if (error || accessToken) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
