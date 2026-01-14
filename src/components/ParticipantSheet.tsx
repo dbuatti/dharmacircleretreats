@@ -19,7 +19,7 @@ import { DietaryCell } from "./sheet/DietaryCell";
 import { CellEditorWrapper } from "./sheet/CellEditorWrapper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, Search, Filter, Plus, Trash2, CheckCircle2, Tag, Users } from "lucide-react";
+import { ArrowUpDown, Search, Filter, Plus, Trash2, CheckCircle2, Tag, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -71,6 +71,7 @@ interface ParticipantSheetProps {
   onUpdateParticipant: (id: string, updates: Partial<Participant>) => Promise<void>;
   onDeleteParticipant: (id: string) => Promise<void>;
   onAddParticipant: (p: Partial<Participant>) => Promise<void>;
+  isUpdating?: boolean;
 }
 
 export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
@@ -78,11 +79,13 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
   onUpdateParticipant,
   onDeleteParticipant,
   onAddParticipant,
+  isUpdating = false,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [editingCell, setEditingCell] = useState<{ rowId: string; columnId: string } | null>(null);
+  const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
 
   // --- Column Definitions ---
   const columns = useMemo<ColumnDef<Participant>[]>(() => {
@@ -321,8 +324,9 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
         
         console.log(`[ParticipantSheet] Saving ${rowsToUpdate.length} row(s) for ${columnId}: ${value}`);
         
-        // Show loading toast
-        const toastId = toast.loading(`Saving ${rowsToUpdate.length > 1 ? rowsToUpdate.length + ' changes' : 'change'}...`);
+        // Track saving state
+        const cellKey = `${rowId}-${columnId}`;
+        setSavingCells(prev => new Set(prev).add(cellKey));
 
         try {
           const updates = rowsToUpdate.map(r => 
@@ -336,7 +340,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
           console.error("Failed to save changes:", error);
           toast.error("Failed to save changes");
         } finally {
-          toast.dismiss(toastId);
+          setSavingCells(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(cellKey);
+            return newSet;
+          });
           // Clear selection after bulk action
           if (isBulkAction) {
             setRowSelection({});
@@ -436,6 +444,12 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
         </div>
         
         <div className="flex items-center gap-3">
+          {isUpdating && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Saving...</span>
+            </div>
+          )}
           <Button 
             variant="outline" 
             size="sm" 

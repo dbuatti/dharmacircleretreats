@@ -17,6 +17,7 @@ const RetreatDetail = () => {
     retreat, 
     participants, 
     loading, 
+    isUpdating,
     addParticipant, 
     updateParticipant, 
     deleteParticipant,
@@ -72,6 +73,7 @@ const RetreatDetail = () => {
           onUpdateParticipant={updateParticipant}
           onDeleteParticipant={deleteParticipant}
           onAddParticipant={addParticipant}
+          isUpdating={isUpdating}
         />
       </RetreatDashboard>
     </div>
