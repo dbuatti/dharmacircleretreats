@@ -42,35 +42,43 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
 
   useEffect(() => {
     // Parse the incoming value string into selectedValues and customText
+    let currentSelected: string[] = [];
+    let currentCustomText = "";
+
     if (value) {
       const parts = value.split(',').map(p => p.trim().toLowerCase()).filter(p => p);
-      
       const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
       
-      const currentSelected = parts.filter(p => predefinedValues.includes(p));
+      currentSelected = parts.filter(p => predefinedValues.includes(p));
       
-      let currentCustomText = "";
       if (currentSelected.includes("other")) {
-        // Find parts that are not predefined options, and try to extract text after 'other:'
-        const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p));
-        
-        // Look for 'other: custom text' pattern
         const otherEntry = parts.find(p => p.startsWith('other:'));
         if (otherEntry) {
             currentCustomText = otherEntry.replace('other:', '').trim();
-        } else if (nonPredefinedParts.length > 0) {
-            // Fallback if 'other:' prefix is missing
-            currentCustomText = nonPredefinedParts.join(', ');
+        } else {
+            const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p));
+            if (nonPredefinedParts.length > 0) {
+                currentCustomText = nonPredefinedParts.join(', ');
+            }
         }
       }
-      
-      setSelectedValues(currentSelected);
-      setCustomText(currentCustomText);
-    } else {
-      setSelectedValues([]);
-      setCustomText("");
     }
-  }, [value]);
+    
+    // Optimization: Only update state if the parsed value is different from the current state
+    // This prevents redundant state updates that cause focus loss.
+    
+    const currentSelectedString = JSON.stringify(currentSelected.sort());
+    const localSelectedString = JSON.stringify(selectedValues.sort());
+
+    if (currentSelectedString !== localSelectedString) {
+        setSelectedValues(currentSelected);
+    }
+    
+    if (currentCustomText !== customText) {
+        setCustomText(currentCustomText);
+    }
+
+  }, [value]); // Dependency on value only
 
   useEffect(() => {
     // Combine selected values and custom text into the output string
