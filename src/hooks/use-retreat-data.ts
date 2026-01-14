@@ -14,17 +14,29 @@ export function useRetreatData(retreatId: string | undefined) {
   // Track pending updates to prevent duplicates
   const pendingUpdates = useRef(new Set<string>());
 
-  const fetchData = useCallback(async () => {
+  // Modified to accept AbortSignal
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!session || !retreatId) return;
     
     setLoading(true);
+    
+    const fetchOptions = signal ? { signal } : {};
+
     try {
       const [retreatResult, participantsResult] = await Promise.all([
-        supabase.from('retreats').select('*').eq('id', retreatId).single(),
-        supabase.from('participants').select('*').eq('retreat_id', retreatId).order('created_at', { ascending: false })
+        // FIX: Use 'as any' to bypass strict type checking for fetch options
+        supabase.from('retreats').select('*', fetchOptions as any).eq('id', retreatId).single(),
+        // FIX: Use 'as any' to bypass strict type checking for fetch options
+        supabase.from('participants').select('*', fetchOptions as any).eq('retreat_id', retreatId).order('created_at', { ascending: false })
       ]);
 
+      // If the request was aborted, we stop processing results
+      if (signal?.aborted) return;
+
       if (retreatResult.error) {
+        // Check if error is due to abortion before showing toast
+        if (retreatResult.error.message.includes('The user aborted a request')) return;
+        
         toast.error("Retreat not found");
         console.error("[useRetreatData] Retreat fetch error:", retreatResult.error);
         return;
@@ -32,6 +44,8 @@ export function useRetreatData(retreatId: string | undefined) {
       setRetreat(retreatResult.data);
 
       if (participantsResult.error) {
+        if (participantsResult.error.message.includes('The user aborted a request')) return;
+        
         setParticipants([]);
         console.error("[useRetreatData] Participants fetch error:", participantsResult.error);
       } else if (participantsResult.data) {
@@ -42,16 +56,27 @@ export function useRetreatData(retreatId: string | undefined) {
         })));
       }
     } catch (error) {
+      // Catch AbortError thrown by fetch/supabase client
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log("[useRetreatData] Fetch aborted successfully.");
+        return;
+      }
       console.error('[useRetreatData] General Fetch error:', error);
     } finally {
-      setLoading(false);
+      // Only set loading to false if we are not aborted
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [session, retreatId]);
 
   useEffect(() => {
     if (!retreatId) return;
     
-    fetchData();
+    const controller = new AbortController();
+    
+    // Initial fetch
+    fetchData(controller.signal);
     
     // Real-time subscription for retreat changes
     const channel = supabase
@@ -63,11 +88,15 @@ export function useRetreatData(retreatId: string | undefined) {
         filter: `id=eq.${retreatId}` 
       }, () => {
         console.log("[useRetreatData] Realtime retreat update detected");
-        fetchData();
+        // Trigger refetch
+        fetchData(); 
       })
       .subscribe();
 
     return () => {
+      // 1. Abort pending fetch requests when component unmounts
+      controller.abort();
+      // 2. Remove real-time channel subscription
       supabase.removeChannel(channel);
     };
   }, [fetchData, retreatId]);
