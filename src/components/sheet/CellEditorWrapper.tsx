@@ -37,6 +37,7 @@ export const CellEditorWrapper = <TValue,>({ cellContext, EditorComponent, optio
   };
 
   const onSave = (id: string, colId: keyof Participant, value: any) => {
+    console.log(`[CellEditorWrapper] Calling updateData. RowIndex: ${rowIndex}, Column: ${colId}, Value: ${value}`);
     meta.updateData(rowIndex, colId, value);
   };
 
