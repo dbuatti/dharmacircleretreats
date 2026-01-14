@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpDown, Search, Filter, Plus, Trash2, CheckCircle2, Tag, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { SortableHeader } from "./sheet/SortableHeader";
 
 // --- Options Definitions ---
 interface SelectOption {
@@ -115,14 +116,7 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
       {
         accessorKey: "full_name",
         header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-full w-full justify-start px-2 text-xs uppercase tracking-widest font-semibold text-[#1e2a5e] hover:bg-gray-100"
-          >
-            Name
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
+          <SortableHeader column={column} title="Name" />
         ),
         cell: (props) => (
           <CellEditorWrapper
@@ -135,7 +129,9 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
       },
       {
         accessorKey: "email",
-        header: "Email",
+        header: ({ column }) => (
+          <SortableHeader column={column} title="Email" />
+        ),
         cell: (props) => (
           <CellEditorWrapper
             cellContext={props}
@@ -252,7 +248,9 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
       },
       {
         accessorKey: "created_at",
-        header: "Created",
+        header: ({ column }) => (
+          <SortableHeader column={column} title="Created" />
+        ),
         cell: ({ getValue }) => (
           <div className="px-2 text-xs text-gray-500">
             {getValue() ? format(getValue() as Date, 'MMM d, yy') : 'N/A'}
@@ -349,6 +347,7 @@ const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
       },
       setEditingCell: setEditingCell,
       editingCell: editingCell,
+      savingCells: savingCells,
     }
   });
 

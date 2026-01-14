@@ -6,6 +6,7 @@ interface CellMeta {
   editingCell: { rowId: string; columnId: string } | null;
   setEditingCell: (editing: { rowId: string; columnId: string } | null) => void;
   updateData: (rowId: string, columnId: keyof Participant, value: any) => void;
+  savingCells: Set<string>;
 }
 
 interface SelectOption {
@@ -31,6 +32,7 @@ export const CellEditorWrapper = <TValue,>({ cellContext, EditorComponent, optio
   const initialValue = getValue() as any;
 
   const isEditing = meta.editingCell?.rowId === rowId && meta.editingCell?.columnId === columnId;
+  const isSaving = meta.savingCells.has(`${rowId}-${columnId}`);
 
   const setIsEditing = (isEditing: boolean) => {
     meta.setEditingCell(isEditing ? { rowId, columnId: column.id } : null);
@@ -51,6 +53,7 @@ export const CellEditorWrapper = <TValue,>({ cellContext, EditorComponent, optio
       setIsEditing={setIsEditing}
       options={options}
       className={className}
+      isSaving={isSaving}
     />
   );
 };

@@ -11,6 +11,7 @@ import {
 import { Participant } from "@/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 
 interface SelectOption {
   value: string;
@@ -26,6 +27,7 @@ interface SelectCellProps {
   onSave: (id: string, columnId: keyof Participant, value: string) => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
+  isSaving: boolean; // New prop
 }
 
 const getStatusBadge = (status: string, options: SelectOption[]) => {
@@ -44,6 +46,7 @@ export const SelectCell: React.FC<SelectCellProps> = ({
   onSave,
   isEditing,
   setIsEditing,
+  isSaving,
 }) => {
   const [value, setValue] = useState(initialValue);
 
@@ -94,10 +97,11 @@ export const SelectCell: React.FC<SelectCellProps> = ({
   if (['payment_status', 'attendance_status', 'registration_status', 'whatsapp_status'].includes(columnId as string)) {
     return (
       <div 
-        className="h-full w-full flex items-center px-2 py-1 cursor-pointer"
+        className="h-full w-full flex items-center px-2 py-1 cursor-pointer justify-between"
         onClick={() => setIsEditing(true)}
       >
         {getStatusBadge(initialValue || "", options)}
+        {isSaving && <Loader2 className="w-3 h-3 animate-spin text-blue-500 ml-2 shrink-0" />}
       </div>
     );
   }
@@ -105,10 +109,13 @@ export const SelectCell: React.FC<SelectCellProps> = ({
   // Use simple text display for logistics columns
   return (
     <div
-      className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm capitalize"
+      className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm capitalize justify-between"
       onClick={() => setIsEditing(true)}
     >
-      {(displayValue as string).replace(/_/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+      <span className="truncate">
+        {(displayValue as string).replace(/_/g, ' ') || <span className="text-gray-400 italic">N/A</span>}
+      </span>
+      {isSaving && <Loader2 className="w-3 h-3 animate-spin text-blue-500 ml-2 shrink-0" />}
     </div>
   );
 };

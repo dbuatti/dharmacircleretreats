@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Participant } from "@/types";
 import { DietaryMultiSelect } from "../DietaryMultiSelect";
 import { Badge } from "@/components/ui/badge";
-import { Utensils } from "lucide-react";
+import { Utensils, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DietaryCellProps {
   initialValue: string | undefined;
@@ -13,6 +14,7 @@ interface DietaryCellProps {
   onSave: (id: string, columnId: keyof Participant, value: string) => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
+  isSaving: boolean; // New prop
 }
 
 const getDietaryBadges = (value: string) => {
@@ -46,6 +48,7 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
   onSave,
   isEditing,
   setIsEditing,
+  isSaving, // Use new prop
 }) => {
   // Local state to hold value during editing
   const [localValue, setLocalValue] = useState(initialValue);
@@ -59,6 +62,7 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
 
   // 2. Handle saving when editing state changes from true to false
   useEffect(() => {
+    // Only save if the popover is closing AND the value has changed
     if (!isEditing && localValue !== initialValue) {
       console.log(`[DietaryCell] Saving change for ${columnId}: ${initialValue} -> ${localValue}`);
       onSave(rowId, columnId, localValue);
@@ -77,10 +81,13 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
   if (!isEditing) {
     return (
       <div
-        className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm"
+        className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm justify-between"
         onClick={() => setIsEditing(true)}
       >
-        {getDietaryBadges(initialValue)}
+        <div className={cn("flex-1", isSaving && "opacity-50")}>
+          {getDietaryBadges(initialValue)}
+        </div>
+        {isSaving && <Loader2 className="w-3 h-3 animate-spin text-blue-500 ml-2 shrink-0" />}
       </div>
     );
   }
@@ -93,6 +100,7 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
         onChange={setLocalValue} // Update local state immediately
         onOpenChange={handleOpenChange} // Control external editing state
         open={isEditing} // Force open when editing
+        disabled={isSaving}
       />
     </div>
   );

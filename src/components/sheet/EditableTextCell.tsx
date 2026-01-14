@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Participant } from "@/types";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface EditableTextCellProps {
   initialValue: string | undefined | null; // Allow null from DB
@@ -13,6 +14,7 @@ interface EditableTextCellProps {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   className?: string;
+  isSaving: boolean; // New prop
 }
 
 const safeString = (value: string | undefined | null): string => value ?? "";
@@ -24,7 +26,8 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
   onSave,
   isEditing,
   setIsEditing,
-  className
+  className,
+  isSaving,
 }) => {
   // Use local state for editing value
   const [value, setValue] = useState(safeString(initialValue));
@@ -87,10 +90,13 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
 
   return (
     <div
-      className={cn("h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm", className)}
+      className={cn("h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm justify-between", className)}
       onClick={() => setIsEditing(true)}
     >
-      {safeString(initialValue) || <span className="text-gray-400 italic">N/A</span>}
+      <span className="truncate">
+        {safeString(initialValue) || <span className="text-gray-400 italic">N/A</span>}
+      </span>
+      {isSaving && <Loader2 className="w-3 h-3 animate-spin text-blue-500 ml-2 shrink-0" />}
     </div>
   );
 };
