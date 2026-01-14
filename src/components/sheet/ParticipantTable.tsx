@@ -173,7 +173,7 @@ export const ParticipantTable: React.FC<ParticipantTableProps> = ({
                   <span>Paid: {paidCount}</span>
                 )}
                 {header.column.id === 'attendance_status' && (
-                  <span>Confirmed: {confirmedCount}</span>
+                    <span>Confirmed: {confirmedCount}</span>
                 )}
               </div>
             );
