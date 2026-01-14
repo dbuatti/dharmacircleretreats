@@ -309,12 +309,14 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
           return;
         }
 
-        const isRowSelected = table.getRow(rowId).getIsSelected();
-        const isMultiSelected = table.getSelectedRowModel().rows.length > 1;
+        // Check if this row is selected and if there are multiple selections
+        const isRowSelected = table.getSelectedRowModel().rows.some(r => r.original.id === rowId);
+        const selectedRows = table.getSelectedRowModel().rows;
+        const isMultiSelected = selectedRows.length > 1;
         const isBulkAction = isRowSelected && isMultiSelected;
 
         const rowsToUpdate = isBulkAction 
-          ? table.getSelectedRowModel().rows.map(r => r.original) 
+          ? selectedRows.map(r => r.original) 
           : [row];
         
         console.log(`[ParticipantSheet] Saving ${rowsToUpdate.length} row(s) for ${columnId}: ${value}`);
