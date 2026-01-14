@@ -141,16 +141,18 @@ export function useRetreatData(retreatId: string | undefined) {
   };
 
   const updateParticipant = async (id: string, updates: Partial<Participant>) => {
-    console.log(`[useRetreatData] Starting Update Participant ${id.substring(0, 4)} API Call`);
+    const idShort = id.substring(0, 4);
+    console.log(`[useRetreatData] Starting Update Participant ${idShort}. Payload:`, updates);
     const startTime = performance.now();
+    
     const { error } = await supabase.from('participants').update(updates).eq('id', id);
     const endTime = performance.now();
     
     if (error) {
-      console.error("[useRetreatData] Update participant error:", error);
+      console.error(`[useRetreatData] Update participant ${idShort} FAILED. Error:`, error);
       throw new Error("Database update failed"); 
     }
-    console.log(`[useRetreatData] Participant ${id.substring(0, 4)} updated successfully. API Duration: ${(endTime - startTime).toFixed(3)} ms`);
+    console.log(`[useRetreatData] Participant ${idShort} updated successfully. API Duration: ${(endTime - startTime).toFixed(3)} ms`);
   };
 
   const deleteParticipant = async (id: string) => {

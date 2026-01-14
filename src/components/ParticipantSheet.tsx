@@ -428,6 +428,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
     const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
     
+    console.log(`[ParticipantSheet] Update triggered for column ${columnId}. Target rows: ${rowsToUpdate.length}. Bulk: ${isBulkAction}`);
+    
     const updateStartTime = performance.now();
     
     // 1. Optimistic Update (Apply change to all affected rows in local state)
