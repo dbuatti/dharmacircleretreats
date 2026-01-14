@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { RetreatDashboard } from "@/components/retreat-dashboard";
 import { useRetreatData } from "@/hooks/use-retreat-data";
@@ -11,6 +11,7 @@ import { ChevronLeft } from "lucide-react";
 import { ParticipantSheet } from "@/components/ParticipantSheet";
 
 const RetreatDetail = () => {
+  console.log("[RetreatDetail] Component mounted/re-rendered.");
   const { id } = useParams<{ id: string }>();
   const { 
     retreat, 
@@ -25,7 +26,18 @@ const RetreatDetail = () => {
   const { session } = useSession();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (loading) {
+      console.log("[RetreatDetail] Loading data...");
+    } else if (retreat) {
+      console.log(`[RetreatDetail] Data loaded. Retreat: ${retreat.name}, Participants: ${participants.length}`);
+    } else {
+      console.error("[RetreatDetail] Data finished loading, but retreat is null.");
+    }
+  }, [loading, retreat, participants.length]);
+
   const handleLogout = async () => {
+    console.log("[RetreatDetail] Initiating logout.");
     await supabase.auth.signOut();
     navigate('/login');
   };

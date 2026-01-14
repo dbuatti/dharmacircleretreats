@@ -82,6 +82,7 @@ type SheetAction =
 const MAX_HISTORY = 10;
 
 const sheetReducer = (state: SheetState, action: SheetAction): SheetState => {
+  console.log(`[ParticipantSheet] Reducer action: ${action.type}`);
   switch (action.type) {
     case 'UPDATE_DATA':
       if (JSON.stringify(action.payload) === JSON.stringify(state.data)) {
@@ -130,6 +131,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
   onDeleteParticipant,
   onAddParticipant,
 }) => {
+  console.time("[ParticipantSheet] Render Cycle");
   const [sheetState, dispatch] = useReducer(sheetReducer, {
     data: initialParticipants,
     history: [],
@@ -144,17 +146,22 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // Sync external data changes (e.g., from subscription)
   useEffect(() => {
+    console.log("[ParticipantSheet] Initial/External data sync detected.");
     dispatch({ type: 'UPDATE_DATA', payload: initialParticipants });
   }, [initialParticipants]);
 
   // --- 4. Data Manipulation and Optimistic Updates ---
 
   const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
+    console.time(`[ParticipantSheet] Cell Update: ${columnId}`);
     const newData = [...sheetState.data];
     const row = newData[rowIndex];
     const oldValue = row[columnId];
     
-    if (oldValue === value) return;
+    if (oldValue === value) {
+      console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
+      return;
+    }
 
     // 1. Optimistic Update
     newData[rowIndex] = {
@@ -163,11 +170,12 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     };
     dispatch({ type: 'UPDATE_DATA', payload: newData });
     toast.success("Cell updated (syncing...)");
+    console.log(`[ParticipantSheet] Optimistic update applied for row ${row.id.substring(0, 4)}.`);
 
     // 2. Background Sync
     onUpdateParticipant(row.id, { [columnId]: value })
       .then(() => {
-        // Success handled by external fetch/subscription
+        console.log(`[ParticipantSheet] Background sync successful for row ${row.id.substring(0, 4)}.`);
       })
       .catch((error) => {
         // 3. Rollback on Error
@@ -178,11 +186,15 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
         };
         dispatch({ type: 'UPDATE_DATA', payload: rolledBackData });
         toast.error("Update failed. Rolled back changes.");
-        console.error("Update error:", error);
+        console.error("[ParticipantSheet] Update failed, rolling back:", error);
+      })
+      .finally(() => {
+        console.timeEnd(`[ParticipantSheet] Cell Update: ${columnId}`);
       });
   }, [sheetState.data, onUpdateParticipant]);
 
   const handleAddRow = async () => {
+    console.log("[ParticipantSheet] Initiating Add Row.");
     const newParticipant: Partial<Participant> = {
       full_name: "New Participant",
       email: "",
@@ -195,6 +207,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       whatsapp_status: "not_invited",
     };
     await onAddParticipant(newParticipant);
+    console.log("[ParticipantSheet] Add Row finished.");
   };
 
   // Define a custom ColumnDef type to include the non-standard 'enableEditing' property
@@ -204,7 +217,9 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 5. Column Definitions ---
 
-  const columns = useMemo<ParticipantColumnDef[]>(() => [
+  const columns = useMemo<ParticipantColumnDef[]>(() => {
+    console.log("[ParticipantSheet] Recalculating Column Definitions (useMemo).");
+    return [
     {
       id: 'select',
       header: ({ table }) => (
@@ -448,7 +463,8 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableSorting: false,
       enableEditing: false,
     },
-  ], [updateData, editingCell, onDeleteParticipant]);
+  ];
+  }, [updateData, editingCell, onDeleteParticipant]);
 
   const table = useReactTable({
     data: sheetState.data,
@@ -482,6 +498,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 6. Bulk Actions ---
   const handleBulkUpdate = (columnId: keyof Participant, value: any) => {
+    console.time(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows)`);
     if (!isBulkEditing) return;
     
     const selectedIds = selectedRows.map(row => row.original.id);
@@ -491,16 +508,18 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       selectedIds.includes(p.id) ? { ...p, [columnId]: value } : p
     );
     dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(`${selectedIds.length} participants updated (syncing...)`);
+    toast.success(`${selectedRows.length} participants updated (syncing...)`);
 
     // Background sync for each selected row
     selectedIds.forEach(id => {
       onUpdateParticipant(id, { [columnId]: value });
     });
     setRowSelection({}); // Clear selection after bulk action
+    console.timeEnd(`[ParticipantSheet] Bulk Update (${selectedRows.length} rows)`);
   };
 
   const handleBulkDelete = () => {
+    console.time(`[ParticipantSheet] Bulk Delete (${selectedRows.length} rows)`);
     if (!isBulkEditing) return;
     if (!confirm(`Are you sure you want to delete ${selectedRows.length} participants?`)) return;
 
@@ -509,13 +528,14 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     // Optimistic removal
     const newData = sheetState.data.filter(p => !selectedIds.includes(p.id));
     dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(`${selectedIds.length} participants deleted (syncing...)`);
+    toast.success(`${selectedRows.length} participants deleted (syncing...)`);
 
     // Background sync
     selectedIds.forEach(id => {
       onDeleteParticipant(id);
     });
     setRowSelection({});
+    console.timeEnd(`[ParticipantSheet] Bulk Delete (${selectedRows.length} rows)`);
   };
 
   // --- 7. Totals Calculation ---
@@ -534,6 +554,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 8. Keyboard Shortcuts (Basic Undo/Redo) ---
   useEffect(() => {
+    console.log("[ParticipantSheet] Setting up keyboard shortcuts.");
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
         event.preventDefault();
@@ -548,9 +569,13 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      console.log("[ParticipantSheet] Cleaning up keyboard shortcuts.");
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
+  console.timeEnd("[ParticipantSheet] Render Cycle");
 
   return (
     <div className="space-y-6">
@@ -718,6 +743,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
                       const columnDef = cell.column.columnDef as ParticipantColumnDef;
                       if (columnDef.enableEditing !== false) {
                         setEditingCell({ rowId: row.id, columnId: cell.column.id });
+                        console.log(`[ParticipantSheet] Entering edit mode for cell: ${cell.column.id}`);
                       }
                     }}
                   >
