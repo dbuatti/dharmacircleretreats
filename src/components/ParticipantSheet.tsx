@@ -74,7 +74,7 @@ interface ParticipantSheetProps {
   isUpdating?: boolean;
 }
 
-export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
+const ParticipantSheetComponent: React.FC<ParticipantSheetProps> = ({
   participants,
   onUpdateParticipant,
   onDeleteParticipant,
@@ -345,7 +345,6 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
             newSet.delete(cellKey);
             return newSet;
           });
-          // NOTE: Removed automatic selection clearing here to allow sequential bulk updates.
         }
       },
       setEditingCell: setEditingCell,
@@ -655,3 +654,5 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     </div>
   );
 };
+
+export const ParticipantSheet = React.memo(ParticipantSheetComponent);

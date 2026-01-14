@@ -17,7 +17,9 @@ export function useRetreatData(retreatId: string | undefined) {
   const fetchData = useCallback(async () => {
     if (!session || !retreatId) return;
     
-    setLoading(true);
+    // Only set loading true if we are currently not loading and need to fetch data
+    if (!loading) setLoading(true);
+    
     try {
       const [retreatResult, participantsResult] = await Promise.all([
         supabase.from('retreats').select('*').eq('id', retreatId).single(),
@@ -27,9 +29,10 @@ export function useRetreatData(retreatId: string | undefined) {
       if (retreatResult.error) {
         toast.error("Retreat not found");
         console.error("[useRetreatData] Retreat fetch error:", retreatResult.error);
-        return;
+        setRetreat(null);
+      } else {
+        setRetreat(retreatResult.data);
       }
-      setRetreat(retreatResult.data);
 
       if (participantsResult.error) {
         setParticipants([]);
@@ -46,7 +49,7 @@ export function useRetreatData(retreatId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [session, retreatId]);
+  }, [session, retreatId]); // Removed 'loading' from dependencies to prevent loop
 
   useEffect(() => {
     if (!retreatId) return;
@@ -62,7 +65,7 @@ export function useRetreatData(retreatId: string | undefined) {
         table: 'retreats', 
         filter: `id=eq.${retreatId}` 
       }, () => {
-        console.log("[useRetreatData] Realtime retreat update detected");
+        console.log("[useRetreatData] Realtime retreat update detected. Refetching data.");
         fetchData();
       })
       .subscribe();
@@ -80,6 +83,8 @@ export function useRetreatData(retreatId: string | undefined) {
       toast.error("Update failed");
       console.error("[useRetreatData] Update retreat error:", error);
     } else {
+      // Optimistic update is already handled by the real-time subscription, 
+      // but we update state here immediately for responsiveness if needed.
       setRetreat(data);
       toast.success("Retreat updated");
     }
@@ -137,7 +142,7 @@ export function useRetreatData(retreatId: string | undefined) {
         throw new Error("Database update failed"); 
       }
 
-      // Update local state immediately
+      // Optimistic update local state immediately
       setParticipants(prev => prev.map(p => {
         if (p.id === id) {
           return { ...p, ...updates };
