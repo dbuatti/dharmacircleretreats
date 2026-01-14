@@ -47,6 +47,7 @@ export const EditableTextCell: React.FC<EditableTextCellProps> = ({
 
   const handleSubmit = () => {
     if (value !== safeString(initialValue)) {
+      console.log(`[EditableTextCell] Saving change for ${columnId}: ${safeString(initialValue)} -> ${value}`);
       onSave(rowId, columnId, value);
     }
     setIsEditing(false);
