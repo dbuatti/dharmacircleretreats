@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ interface DietaryMultiSelectProps {
   disabled?: boolean;
 }
 
-// Helper function to parse the comma-separated string into internal state
+// Helper function to parse the comma-separated string into internal state structure
 const parseValue = (value: string) => {
   let currentSelected: string[] = [];
   let currentCustomText = "";
@@ -90,45 +90,28 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   disabled = false,
 }) => {
   const [open, setOpen] = useState(false);
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
-  const [customText, setCustomText] = useState("");
   
-  // Ref to track if the change originated internally
-  const isInternalChange = React.useRef(false);
-
-  // Effect 1: Sync Prop -> State (Only run when external prop changes)
-  useEffect(() => {
-    // If the last change was internal, skip synchronization to prevent loop
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
-    
-    const { selectedValues: newSelected, customText: newCustom } = parseValue(value);
-    
-    setSelectedValues(newSelected);
-    setCustomText(newCustom);
-  }, [value]);
-
-  // Effect 2: Sync State -> Prop (Only run when internal state changes)
-  useEffect(() => {
-    const output = formatValue(selectedValues, customText);
-
-    if (output !== value) {
-      isInternalChange.current = true;
-      onChange(output);
-    }
-  }, [selectedValues, customText, onChange, value]);
-
+  // Derive state from the external value prop
+  const { selectedValues, customText } = useMemo(() => parseValue(value), [value]);
 
   const handleSelect = (optionValue: string) => {
-    setSelectedValues(prev => {
-      if (prev.includes(optionValue)) {
-        return prev.filter(v => v !== optionValue);
-      } else {
-        return [...prev, optionValue];
-      }
-    });
+    let newSelected: string[];
+    
+    if (selectedValues.includes(optionValue)) {
+      newSelected = selectedValues.filter(v => v !== optionValue);
+    } else {
+      newSelected = [...selectedValues, optionValue];
+    }
+    
+    // Format and call onChange immediately
+    const newOutput = formatValue(newSelected, customText);
+    onChange(newOutput);
+  };
+  
+  const handleCustomTextChange = (newCustomText: string) => {
+    // Format and call onChange immediately
+    const newOutput = formatValue(selectedValues, newCustomText);
+    onChange(newOutput);
   };
 
   const displayValue = selectedValues.map(v => {
@@ -192,7 +175,7 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
                 id="custom-dietary"
                 placeholder="Specify 'Other' requirements..."
                 value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
+                onChange={(e) => handleCustomTextChange(e.target.value)}
                 className="h-8 text-sm"
                 disabled={disabled}
               />

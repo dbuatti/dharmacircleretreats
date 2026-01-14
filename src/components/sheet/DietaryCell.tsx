@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Participant } from "@/types";
 import { DietaryMultiSelect } from "../DietaryMultiSelect";
 import { Badge } from "@/components/ui/badge";
@@ -47,17 +47,13 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
   isEditing,
   setIsEditing,
 }) => {
-  const [value, setValue] = useState(initialValue);
-
-  useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
-
-  const handleSave = (newValue: string) => {
+  const handleValueChange = (newValue: string) => {
+    // The DietaryMultiSelect is now fully controlled and only calls onChange when the value changes internally.
+    // We still need to check against initialValue to prevent unnecessary DB calls if the prop sync was delayed,
+    // but the primary loop prevention is now in the controlled component pattern.
     if (newValue !== initialValue) {
       onSave(rowId, columnId, newValue);
     }
-    // Note: We rely on the Popover's internal state management for closing the editor.
   };
 
   return (
@@ -65,8 +61,8 @@ export const DietaryCell: React.FC<DietaryCellProps> = ({
       className="h-full w-full flex items-center px-2 py-1 cursor-pointer text-sm"
     >
       <DietaryMultiSelect
-        value={value}
-        onChange={handleSave}
+        value={initialValue}
+        onChange={handleValueChange}
       />
     </div>
   );
