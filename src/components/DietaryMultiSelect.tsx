@@ -31,6 +31,59 @@ interface DietaryMultiSelectProps {
   disabled?: boolean;
 }
 
+// Helper function to parse the comma-separated string into internal state
+const parseValue = (value: string) => {
+  let currentSelected: string[] = [];
+  let currentCustomText = "";
+  const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
+
+  if (value) {
+    const parts = value.split(',').map(p => p.trim()).filter(p => p);
+    
+    parts.forEach(part => {
+      const lowerPart = part.toLowerCase();
+      
+      if (predefinedValues.includes(lowerPart) && !currentSelected.includes(lowerPart)) {
+        currentSelected.push(lowerPart);
+      } else if (lowerPart.startsWith('other:')) {
+        if (!currentSelected.includes('other')) {
+          currentSelected.push('other');
+        }
+        currentCustomText = part.substring('other:'.length).trim();
+      } else if (!predefinedValues.includes(lowerPart) && currentSelected.includes('other')) {
+        // If 'other' is selected, collect all non-predefined parts as custom text
+        currentCustomText = (currentCustomText ? currentCustomText + ', ' : '') + part;
+      }
+    });
+    
+    // Final cleanup for custom text if 'other' is selected but wasn't explicitly parsed with 'other:' prefix
+    if (currentSelected.includes('other') && !currentCustomText) {
+        const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p.toLowerCase()));
+        if (nonPredefinedParts.length > 0) {
+            currentCustomText = nonPredefinedParts.join(', ');
+        }
+    }
+  }
+  
+  return { selectedValues: currentSelected, customText: currentCustomText };
+};
+
+// Helper function to format internal state back into the comma-separated string
+const formatValue = (selectedValues: string[], customText: string) => {
+  let outputParts = selectedValues.filter(v => v !== 'other');
+  
+  if (selectedValues.includes("other")) {
+    if (customText.trim()) {
+      outputParts.push(`other: ${customText.trim()}`);
+    } else {
+      outputParts.push('other');
+    }
+  }
+
+  return outputParts.join(', ');
+};
+
+
 export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   value,
   onChange,
@@ -39,68 +92,32 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   const [open, setOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [customText, setCustomText] = useState("");
+  
+  // Ref to track if the change originated internally
+  const isInternalChange = React.useRef(false);
 
-  // Effect 1: Sync Prop -> State (Robust Parsing)
+  // Effect 1: Sync Prop -> State (Only run when external prop changes)
   useEffect(() => {
-    let currentSelected: string[] = [];
-    let currentCustomText = "";
-    const predefinedValues = DIETARY_OPTIONS.map(o => o.value);
-
-    if (value) {
-      const parts = value.split(',').map(p => p.trim()).filter(p => p);
-      
-      parts.forEach(part => {
-        const lowerPart = part.toLowerCase();
-        
-        if (predefinedValues.includes(lowerPart) && !currentSelected.includes(lowerPart)) {
-          currentSelected.push(lowerPart);
-        } else if (lowerPart.startsWith('other:')) {
-          if (!currentSelected.includes('other')) {
-            currentSelected.push('other');
-          }
-          currentCustomText = part.substring('other:'.length).trim();
-        }
-      });
-      
-      if (currentSelected.includes('other') && !currentCustomText) {
-          const nonPredefinedParts = parts.filter(p => !predefinedValues.includes(p.toLowerCase()));
-          if (nonPredefinedParts.length > 0) {
-              currentCustomText = nonPredefinedParts.join(', ');
-          }
-      }
+    // If the last change was internal, skip synchronization to prevent loop
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
     }
     
-    const currentSelectedString = JSON.stringify(currentSelected.sort());
-    const localSelectedString = JSON.stringify(selectedValues.sort());
-
-    if (currentSelectedString !== localSelectedString) {
-        setSelectedValues(currentSelected);
-    }
+    const { selectedValues: newSelected, customText: newCustom } = parseValue(value);
     
-    if (currentCustomText !== customText) {
-        setCustomText(currentCustomText);
-    }
-
+    setSelectedValues(newSelected);
+    setCustomText(newCustom);
   }, [value]);
 
-  // Effect 2: Sync State -> Prop
+  // Effect 2: Sync State -> Prop (Only run when internal state changes)
   useEffect(() => {
-    let outputParts = selectedValues.filter(v => v !== 'other');
-    
-    if (selectedValues.includes("other")) {
-      if (customText.trim()) {
-        outputParts.push(`other: ${customText.trim()}`);
-      } else {
-        outputParts.push('other');
-      }
-    }
-
-    const output = outputParts.join(', ');
+    const output = formatValue(selectedValues, customText);
 
     if (output !== value) {
-        onChange(output);
+      isInternalChange.current = true;
+      onChange(output);
     }
-
   }, [selectedValues, customText, onChange, value]);
 
 
