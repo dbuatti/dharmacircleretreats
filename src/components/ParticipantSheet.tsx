@@ -412,51 +412,58 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
   const isBulkEditing = selectedRows.length > 0;
   
   const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
-    const row = dataRef.current[rowIndex];
-    const oldValue = row[columnId];
-    
-    if (oldValue === value) {
-      console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
-      return;
-    }
-
-    // Check if the current row is selected AND if more than one row is selected
-    const isRowSelected = table.getRow(row.id).getIsSelected();
-    const isMultiSelected = selectedRows.length > 1;
-    const isBulkAction = isRowSelected && isMultiSelected;
-
-    const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
-    const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
-    
-    console.log(`[ParticipantSheet] Update triggered for column ${columnId}. Target rows: ${rowsToUpdate.length}. Bulk: ${isBulkAction}`);
-    
-    const updateStartTime = performance.now();
-    
-    // 1. Optimistic Update (Apply change to all affected rows in local state)
-    const newData = dataRef.current.map(p => {
-      if (rowIdsToUpdate.includes(p.id)) {
-        return { ...p, [columnId]: value };
+    console.log(`[ParticipantSheet] --- START updateData for column ${columnId} ---`);
+    try {
+      const row = dataRef.current[rowIndex];
+      const oldValue = row[columnId];
+      
+      if (oldValue === value) {
+        console.log("[ParticipantSheet] Cell value unchanged, skipping update.");
+        return;
       }
-      return p;
-    });
-    dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
-    console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
 
-    // 2. Background Sync (Trigger API call for each affected row)
-    const updates = rowsToUpdate.map(r => 
-      onUpdateParticipant(r.id, { [columnId]: value })
-        .catch((error) => {
-          // 3. Rollback on Error (Log and rely on undo/refresh)
-          console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
-          toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
-        })
-    );
-    
-    Promise.all(updates).finally(() => {
-      const duration = performance.now() - updateStartTime;
-      console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
-    });
+      // Check if the current row is selected AND if more than one row is selected
+      const isRowSelected = table.getRow(row.id).getIsSelected();
+      const isMultiSelected = selectedRows.length > 1;
+      const isBulkAction = isRowSelected && isMultiSelected;
+
+      const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
+      const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
+      
+      console.log(`[ParticipantSheet] Update triggered. Target rows: ${rowsToUpdate.length}. Bulk: ${isBulkAction}. Value: ${value}`);
+      
+      const updateStartTime = performance.now();
+      
+      // 1. Optimistic Update (Apply change to all affected rows in local state)
+      const newData = dataRef.current.map(p => {
+        if (rowIdsToUpdate.includes(p.id)) {
+          return { ...p, [columnId]: value };
+        }
+        return p;
+      });
+      dispatch({ type: 'UPDATE_DATA', payload: newData });
+      toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
+      console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
+
+      // 2. Background Sync (Trigger API call for each affected row)
+      const updates = rowsToUpdate.map(r => 
+        onUpdateParticipant(r.id, { [columnId]: value })
+          .catch((error) => {
+            // 3. Rollback on Error (Log and rely on undo/refresh)
+            console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
+            toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
+          })
+      );
+      
+      Promise.all(updates).finally(() => {
+        const duration = performance.now() - updateStartTime;
+        console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
+      });
+    } catch (e) {
+      console.error("[ParticipantSheet] CRITICAL ERROR in updateData:", e);
+      toast.error("A critical error occurred during data update.");
+    }
+    console.log(`[ParticipantSheet] --- END updateData ---`);
   }, [onUpdateParticipant, dispatch, selectedRows.length, table]); // IMPORTANT: Include table in dependencies
 
   // Update table meta with the stable updateData function
