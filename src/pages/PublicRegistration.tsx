@@ -20,6 +20,21 @@ import { CheckCircle2, Calendar, MapPin, Loader2, AlertCircle, User as UserIcon,
 import { BrandLogo } from "@/components/BrandLogo";
 import { useSession } from "@/contexts/SessionContext";
 import { DietaryMultiSelect } from "@/components/DietaryMultiSelect";
+import { SegmentedSelect } from "@/components/SegmentedSelect"; // Import new component
+
+// Options for SegmentedSelect
+const ACCOMMODATION_OPTIONS = [
+  { value: "camping", label: "Camping", description: "Bring your own tent and gear." },
+  { value: "offsite", label: "Offsite", description: "I will arrange my own accommodation nearby." },
+  { value: "courthouse", label: "Courthouse", description: "Shared indoor accommodation (limited availability)." },
+];
+
+const TRANSPORTATION_OPTIONS = [
+  { value: "driving", label: "Driving (Own Vehicle)", description: "I will drive myself and do not need carpooling." },
+  { value: "driving-lift", label: "Driving (Can Offer Lift)", description: "I can drive and have space for others." },
+  { value: "need-lift", label: "Need a Lift", description: "I need a ride to the retreat location." },
+];
+
 
 const PublicRegistration = () => {
   const { id } = useParams<{ id: string }>();
@@ -408,43 +423,27 @@ const PublicRegistration = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="accommodation" className="text-[10px] uppercase tracking-widest text-gray-500">
+                    <Label htmlFor="accommodation" className="text-[10px] uppercase tracking-widest text-gray-500 mb-2 block">
                       Accommodation Plan <span className="text-red-500">*</span>
                     </Label>
-                    <Select 
-                      value={formData.accommodation_plan} 
+                    <SegmentedSelect
+                      options={ACCOMMODATION_OPTIONS}
+                      value={formData.accommodation_plan}
                       onValueChange={(value) => setFormData({...formData, accommodation_plan: value})}
                       disabled={submitting}
-                    >
-                      <SelectTrigger className="border-0 border-b border-gray-200 rounded-none focus:ring-0 focus:border-[#1e2a5e] h-10 bg-transparent">
-                        <SelectValue placeholder="Select accommodation..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="camping">Camping (bring your own tent)</SelectItem>
-                        <SelectItem value="offsite">Offsite (own accommodation)</SelectItem>
-                        <SelectItem value="courthouse">Courthouse</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="transportation" className="text-[10px] uppercase tracking-widest text-gray-500">
+                    <Label htmlFor="transportation" className="text-[10px] uppercase tracking-widest text-gray-500 mb-2 block">
                       Transportation Plan <span className="text-red-500">*</span>
                     </Label>
-                    <Select 
-                      value={formData.transportation_plan} 
+                    <SegmentedSelect
+                      options={TRANSPORTATION_OPTIONS}
+                      value={formData.transportation_plan}
                       onValueChange={(value) => setFormData({...formData, transportation_plan: value})}
                       disabled={submitting}
-                    >
-                      <SelectTrigger className="border-0 border-b border-gray-200 rounded-none focus:ring-0 focus:border-[#1e2a5e] h-10 bg-transparent">
-                        <SelectValue placeholder="Select transportation..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="driving">Driving (own vehicle)</SelectItem>
-                        <SelectItem value="driving-lift">Driving (can give a lift)</SelectItem>
-                        <SelectItem value="need-lift">Need a lift</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
                 </div>
 
