@@ -15,9 +15,23 @@ const Login = () => {
   const { session } = useSession();
 
   useEffect(() => {
+    // 1. Check if session is already active via context
     if (session) {
       navigate('/');
+      return;
     }
+
+    // 2. Explicitly check for session after a redirect (e.g., from OAuth)
+    const checkSession = async () => {
+      const { data: { session: newSession } } = await supabase.auth.getSession();
+      if (newSession) {
+        // If a session is found (meaning the OAuth redirect worked), navigate away.
+        // The SessionProvider will pick up the session change.
+        navigate('/');
+      }
+    };
+
+    checkSession();
   }, [session, navigate]);
 
   return (
