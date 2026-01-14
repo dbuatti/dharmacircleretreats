@@ -159,12 +159,41 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
   // --- 4. Data Manipulation and Optimistic Updates ---
 
+  const table = useReactTable({
+    data: sheetState.data,
+    columns: [], // Placeholder, defined below
+    columnResizeMode,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      globalFilter,
+      rowSelection,
+    },
+    initialState: {
+      columnPinning: {
+        left: ['select', 'full_name', 'email'],
+      },
+    },
+    meta: {
+      updateData: (rowIndex: number, columnId: keyof Participant, value: any) => {
+        // This is a placeholder function definition for the meta object.
+        // The actual logic is defined in the useCallback below.
+      },
+      setEditingCell: setEditingCell,
+      editingCell: editingCell,
+    }
+  });
+
+  const selectedRows = table.getSelectedRowModel().rows;
+  const isBulkEditing = selectedRows.length > 0;
+  
   const updateData = useCallback((rowIndex: number, columnId: keyof Participant, value: any) => {
-    const rowIdShort = dataRef.current[rowIndex].id.substring(0, 4);
-    const updateStartTime = performance.now();
-    
-    const currentData = dataRef.current;
-    const row = currentData[rowIndex];
+    const row = dataRef.current[rowIndex];
     const oldValue = row[columnId];
     
     if (oldValue === value) {
@@ -172,44 +201,51 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       return;
     }
 
-    // 1. Optimistic Update
-    const newData = [...currentData];
-    newData[rowIndex] = {
-      ...row,
-      [columnId]: value,
-    };
-    dispatch({ type: 'UPDATE_DATA', payload: newData });
-    toast.success("Cell updated (syncing...)");
-    console.log(`[ParticipantSheet] Optimistic update applied for row ${rowIdShort}.`);
+    const isRowSelected = table.getRow(row.id).getIsSelected();
+    const isMultiSelected = selectedRows.length > 1;
+    const isBulkAction = isRowSelected && isMultiSelected;
 
-    // 2. Background Sync
-    onUpdateParticipant(row.id, { [columnId]: value })
-      .then(() => {
-        console.log(`[ParticipantSheet] Background sync successful for row ${rowIdShort}.`);
-      })
-      .catch((error) => {
-        // 3. Rollback on Error
-        const rolledBackData = [...dataRef.current];
-        // Find the index again in case the array order changed during the async operation
-        const rollbackIndex = rolledBackData.findIndex(p => p.id === row.id);
-        
-        if (rollbackIndex !== -1) {
-            rolledBackData[rollbackIndex] = {
-                ...row,
-                [columnId]: oldValue, // Revert to old value
-            };
-            dispatch({ type: 'UPDATE_DATA', payload: rolledBackData });
-            toast.error("Update failed. Rolled back changes.");
-            console.error("[ParticipantSheet] Update failed, rolling back:", error);
-        } else {
-            console.warn("[ParticipantSheet] Could not find row for rollback. Data might be inconsistent.");
-        }
-      })
-      .finally(() => {
-        const duration = performance.now() - updateStartTime;
-        console.log(`[ParticipantSheet] Cell Update: ${columnId}-${rowIdShort}: ${duration.toFixed(3)} ms`);
-      });
-  }, [onUpdateParticipant, dispatch]); // Now stable!
+    const rowsToUpdate = isBulkAction ? selectedRows.map(r => r.original) : [row];
+    const rowIdsToUpdate = rowsToUpdate.map(r => r.id);
+    
+    const updateStartTime = performance.now();
+    
+    // 1. Optimistic Update (Apply change to all affected rows in local state)
+    const newData = dataRef.current.map(p => {
+      if (rowIdsToUpdate.includes(p.id)) {
+        return { ...p, [columnId]: value };
+      }
+      return p;
+    });
+    dispatch({ type: 'UPDATE_DATA', payload: newData });
+    toast.success(isBulkAction ? `${rowsToUpdate.length} cells updated (syncing...)` : "Cell updated (syncing...)");
+    console.log(`[ParticipantSheet] Optimistic update applied for ${rowsToUpdate.length} rows.`);
+
+    // 2. Background Sync (Trigger API call for each affected row)
+    const updates = rowsToUpdate.map(r => 
+      onUpdateParticipant(r.id, { [columnId]: value })
+        .catch((error) => {
+          // 3. Rollback on Error (This is complex for bulk, so we log and rely on the user to undo/refresh)
+          console.error(`[ParticipantSheet] Update failed for row ${r.id.substring(0, 4)}. Error:`, error);
+          toast.error(`Update failed for ${r.full_name}. Please undo or refresh.`);
+          // Note: Full atomic rollback for multiple rows is complex. We rely on the undo history for recovery.
+        })
+    );
+    
+    Promise.all(updates).finally(() => {
+      const duration = performance.now() - updateStartTime;
+      console.log(`[ParticipantSheet] Bulk/Single Update Sync (${rowsToUpdate.length} rows): ${duration.toFixed(3)} ms`);
+    });
+  }, [onUpdateParticipant, dispatch, selectedRows.length, table]); // Depend on selectedRows.length and table instance
+
+  // Update table meta with the stable updateData function
+  useEffect(() => {
+    table.options.meta = {
+      ...table.options.meta,
+      updateData: updateData,
+    };
+  }, [updateData, table]);
+
 
   const handleAddRow = async () => {
     console.log("[ParticipantSheet] Initiating Add Row.");
@@ -442,39 +478,15 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableEditing: false,
     },
   ];
-  }, [updateData, onDeleteParticipant]); 
+  }, [onDeleteParticipant, updateData]); 
 
-  const table = useReactTable({
-    data: sheetState.data,
+  // Re-initialize table with stable columns
+  table.setOptions(prev => ({
+    ...prev,
     columns,
-    columnResizeMode,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      globalFilter,
-      rowSelection,
-    },
-    initialState: {
-      columnPinning: {
-        left: ['select', 'full_name', 'email'],
-      },
-    },
-    meta: {
-      updateData: updateData,
-      setEditingCell: setEditingCell,
-      editingCell: editingCell,
-    }
-  });
+  }));
 
-  const selectedRows = table.getSelectedRowModel().rows;
-  const isBulkEditing = selectedRows.length > 0;
-
-  // --- 6. Bulk Actions ---
+  // --- 6. Bulk Actions (Toolbar) ---
   const handleBulkUpdate = (columnId: keyof Participant, value: any) => {
     const bulkStartTime = performance.now();
     if (!isBulkEditing) return;
@@ -490,7 +502,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
 
     // Background sync for each selected row
     selectedIds.forEach(id => {
-      onUpdateParticipant(id, { [columnId]: value });
+      onUpdateParticipant(id, { [columnId]: value })
+        .catch((error) => {
+          console.error(`[ParticipantSheet] Bulk update failed for row ${id.substring(0, 4)}. Error:`, error);
+          toast.error(`Bulk update failed for some rows. Please undo or refresh.`);
+        });
     });
     setRowSelection({}); // Clear selection after bulk action
     const duration = performance.now() - bulkStartTime;
