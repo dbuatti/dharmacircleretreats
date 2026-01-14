@@ -40,7 +40,10 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [customText, setCustomText] = useState("");
 
+  // Effect 1: Sync Prop -> State
   useEffect(() => {
+    console.log("[DietaryMultiSelect] Prop 'value' received:", value);
+    
     // Parse the incoming value string into selectedValues and customText
     let currentSelected: string[] = [];
     let currentCustomText = "";
@@ -65,21 +68,23 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
     }
     
     // Optimization: Only update state if the parsed value is different from the current state
-    // This prevents redundant state updates that cause focus loss.
     
     const currentSelectedString = JSON.stringify(currentSelected.sort());
     const localSelectedString = JSON.stringify(selectedValues.sort());
 
     if (currentSelectedString !== localSelectedString) {
+        console.log("[DietaryMultiSelect] Updating selectedValues from prop:", currentSelected);
         setSelectedValues(currentSelected);
     }
     
     if (currentCustomText !== customText) {
+        console.log("[DietaryMultiSelect] Updating customText from prop:", currentCustomText);
         setCustomText(currentCustomText);
     }
 
   }, [value]); // Dependency on value only
 
+  // Effect 2: Sync State -> Prop
   useEffect(() => {
     // Combine selected values and custom text into the output string
     let outputParts = selectedValues.filter(v => v !== 'other');
@@ -96,6 +101,7 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
 
     // Only call onChange if the derived output is different from the current prop value
     if (output !== value) {
+        console.log("[DietaryMultiSelect] Calling onChange with new output:", output);
         onChange(output);
     }
 
@@ -178,7 +184,10 @@ export const DietaryMultiSelect: React.FC<DietaryMultiSelectProps> = ({
             id="custom-dietary"
             placeholder="e.g., Nut allergy, Low FODMAP"
             value={customText}
-            onChange={(e) => setCustomText(e.target.value)}
+            onChange={(e) => {
+                console.log("[DietaryMultiSelect] Input change:", e.target.value);
+                setCustomText(e.target.value);
+            }}
             className="border-0 border-b border-gray-200 rounded-none focus-visible:ring-0 focus-visible:border-[#1e2a5e] px-0 h-10 transition-colors"
             disabled={disabled}
           />
