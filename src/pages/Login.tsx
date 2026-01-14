@@ -23,11 +23,20 @@ const Login = () => {
 
     // 2. Explicitly check for session after a redirect (e.g., from OAuth)
     const checkSession = async () => {
-      const { data: { session: newSession } } = await supabase.auth.getSession();
-      if (newSession) {
-        // If a session is found (meaning the OAuth redirect worked), navigate away.
-        // The SessionProvider will pick up the session change.
-        navigate('/');
+      try {
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        if (newSession) {
+          // If a session is found (meaning the OAuth redirect worked), navigate away.
+          // The SessionProvider will pick up the session change.
+          navigate('/');
+        }
+      } catch (error) {
+        // Catch the AbortError that frequently occurs during HMR/redirect race conditions
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn('[Login] Supabase getSession aborted, ignoring error.');
+        } else {
+          console.error('[Login] Error checking session:', error);
+        }
       }
     };
 
