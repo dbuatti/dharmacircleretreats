@@ -25,7 +25,8 @@ export const CellEditorWrapper = <TValue,>({ cellContext, EditorComponent, optio
   const { row, column, getValue, table } = cellContext;
   const meta = table.options.meta as CellMeta;
   
-  const rowId = row.id;
+  // Use the actual participant ID from row.original.id, not row.id (which is the row index)
+  const rowId = row.original.id;
   const columnId = column.id as keyof Participant;
   const initialValue = getValue() as any;
 
