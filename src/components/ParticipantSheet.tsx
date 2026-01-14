@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { EditableTextCell } from "./sheet/EditableTextCell";
 import { SelectCell } from "./sheet/SelectCell";
 import { DietaryCell } from "./sheet/DietaryCell";
+import { CellEditorWrapper } from "./sheet/CellEditorWrapper"; // Import the new wrapper
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, Search, Filter, Plus, Trash2, Undo2, Redo2, CheckCircle2, Tag, Users } from "lucide-react";
@@ -282,14 +283,10 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row, column, getValue }) => (
-        <EditableTextCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="full_name"
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={EditableTextCell}
           className="font-medium"
         />
       ),
@@ -301,14 +298,10 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "email",
       header: "Email",
-      cell: ({ row, column, getValue }) => (
-        <EditableTextCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="email"
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={EditableTextCell}
           className="text-gray-600"
         />
       ),
@@ -320,14 +313,10 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "dietary_requirements",
       header: "Dietary",
-      cell: ({ row, column, getValue }) => (
-        <DietaryCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="dietary_requirements"
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={DietaryCell}
         />
       ),
       size: 250,
@@ -335,15 +324,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "accommodation_plan",
       header: "Accommodation",
-      cell: ({ row, column, getValue }) => (
-        <SelectCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="accommodation_plan"
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={SelectCell}
           options={ACCOMMODATION_OPTIONS}
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
         />
       ),
       size: 150,
@@ -351,15 +336,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "transportation_plan",
       header: "Transport",
-      cell: ({ row, column, getValue }) => (
-        <SelectCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="transportation_plan"
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={SelectCell}
           options={TRANSPORTATION_OPTIONS}
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
         />
       ),
       size: 150,
@@ -367,14 +348,10 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "eta",
       header: "ETA",
-      cell: ({ row, column, getValue }) => (
-        <EditableTextCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="eta"
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={EditableTextCell}
           className="text-gray-700"
         />
       ),
@@ -383,14 +360,10 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "notes",
       header: "Other Info / Notes",
-      cell: ({ row, column, getValue }) => (
-        <EditableTextCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="notes"
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={EditableTextCell}
           className="text-gray-500 italic"
         />
       ),
@@ -399,15 +372,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "payment_status",
       header: "Payment",
-      cell: ({ row, column, getValue }) => (
-        <SelectCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="payment_status"
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={SelectCell}
           options={PAYMENT_OPTIONS}
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
         />
       ),
       size: 150,
@@ -415,15 +384,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "whatsapp_status",
       header: "WhatsApp Group",
-      cell: ({ row, column, getValue }) => (
-        <SelectCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="whatsapp_status"
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={SelectCell}
           options={WHATSAPP_OPTIONS}
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
         />
       ),
       size: 150,
@@ -431,15 +396,11 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
     {
       accessorKey: "registration_status",
       header: "Reg Status",
-      cell: ({ row, column, getValue }) => (
-        <SelectCell
-          initialValue={getValue() as string}
-          rowId={row.original.id}
-          columnId="registration_status"
+      cell: (props) => (
+        <CellEditorWrapper
+          cellContext={props}
+          EditorComponent={SelectCell}
           options={REGISTRATION_OPTIONS}
-          onSave={(id, colId, val) => updateData(row.index, colId, val)}
-          isEditing={editingCell?.rowId === row.id && editingCell?.columnId === column.id}
-          setIsEditing={(isEditing) => setEditingCell(isEditing ? { rowId: row.id, columnId: column.id } : null)}
         />
       ),
       size: 150,
@@ -488,7 +449,7 @@ export const ParticipantSheet: React.FC<ParticipantSheetProps> = ({
       enableEditing: false,
     },
   ];
-  }, [updateData, editingCell, onDeleteParticipant]); // updateData is now stable!
+  }, [updateData, onDeleteParticipant]); // Removed editingCell dependency
 
   const table = useReactTable({
     data: sheetState.data,
