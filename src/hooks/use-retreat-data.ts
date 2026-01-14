@@ -153,6 +153,16 @@ export function useRetreatData(retreatId: string | undefined) {
       throw new Error("Database update failed"); 
     }
     console.log(`[useRetreatData] Participant ${idShort} updated successfully. API Duration: ${(endTime - startTime).toFixed(3)} ms`);
+
+    // Update local state immediately after successful API call
+    setParticipants(prev => prev.map(p => {
+      if (p.id === id) {
+        const updated = { ...p, ...updates };
+        console.log(`[useRetreatData] Updated local state for participant ${idShort}:`, updated);
+        return updated;
+      }
+      return p;
+    }));
   };
 
   const deleteParticipant = async (id: string) => {
