@@ -12,7 +12,12 @@ declare global {
 }
 
 if (!window.supabase) {
-  window.supabase = createClient(supabaseUrl, supabaseAnonKey);
+  window.supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Disable storage lock to prevent race conditions during HMR/rapid initialization
+      storageLock: false,
+    }
+  } as any);
 }
 
 export const supabase = window.supabase;
