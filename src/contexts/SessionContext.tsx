@@ -26,53 +26,62 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const checkAdminAccess = (session: Session | null) => {
+    const email = session?.user?.email?.toLowerCase();
+    const allowed = email ? ALLOWED_ADMIN_EMAILS.includes(email) : false;
+    setIsAdmin(allowed);
+    return allowed;
+  };
+
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      checkAdminAccess(session);
+    // 1. Initial session check (can be prone to race conditions)
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      checkAdminAccess(initialSession);
       setLoading(false);
     })
     .catch(error => {
-      // Catch potential errors during session retrieval, often due to internal lock issues on rapid unmount/remount
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('[SessionContext] Session retrieval aborted.');
+        console.log('[SessionContext] Initial session retrieval aborted.');
       } else {
         console.error('[SessionContext] Error fetching initial session:', error);
       }
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // 2. Listen for auth changes (more reliable for redirects)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      checkAdminAccess(session);
+      console.log(`[SessionContext] Auth state change: ${event}`);
       
-      // Handle specific auth events
-      if (event === 'SIGNED_IN') {
-        const email = session?.user?.email?.toLowerCase();
-        if (email && ALLOWED_ADMIN_EMAILS.includes(email)) {
-          toast.success('Welcome back! Admin access granted.');
-        } else if (email) {
-          toast.error('This account is not authorized for admin access.');
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        setSession(session);
+        const allowed = checkAdminAccess(session);
+        setLoading(false); // Ensure loading is false after session is set
+        
+        if (event === 'SIGNED_IN') {
+          const email = session?.user?.email?.toLowerCase();
+          if (email && allowed) {
+            toast.success('Welcome back! Admin access granted.');
+          } else if (email) {
+            toast.error('This account is not authorized for admin access.');
+          }
         }
       } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setIsAdmin(false);
+        setLoading(false);
         toast.success('Signed out successfully');
       } else if (event === 'TOKEN_REFRESHED') {
+        setSession(session);
         console.log('[Session] Token refreshed');
       } else if (event === 'USER_UPDATED') {
+        setSession(session);
         console.log('[Session] User updated');
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const checkAdminAccess = (session: Session | null) => {
-    const email = session?.user?.email?.toLowerCase();
-    const allowed = email ? ALLOWED_ADMIN_EMAILS.includes(email) : false;
-    setIsAdmin(allowed);
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
