@@ -36,40 +36,31 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     let isMounted = true;
     
-    // 1. Manual URL hash processing (Fallback for redirects)
-    const hash = window.location.hash;
-    if (hash.includes('access_token')) {
-      console.log('[SessionContext] Found access token in hash. Attempting to set session.');
-      // This call tells Supabase to process the hash and store the session.
-      // We don't need the result, as onAuthStateChange will fire next.
-      supabase.auth.getSession().catch(e => {
-        if (e instanceof Error && e.name === 'AbortError') {
-          console.warn('[SessionContext] Manual getSession aborted during hash processing.');
-        } else {
-          console.error('[SessionContext] Error during manual hash processing:', e);
-        }
-      });
-      // Clean up the hash immediately after processing is initiated
+    // Clean up URL hash immediately if it contains auth tokens
+    // This prevents the hash from being processed again on page refresh
+    if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // 2. Listen for auth changes (Primary mechanism)
+    // Listen for auth changes - this is the primary mechanism
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
       
-      console.log(`[SessionContext] Auth state change: ${event}`);
+      console.log(`[SessionContext] Auth state change: ${event}`, session ? 'Session found' : 'No session');
       
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      // Handle all session-related events
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         setSession(session);
-        const allowed = checkAdminAccess(session);
+        checkAdminAccess(session);
         setLoading(false);
         
-        if (event === 'SIGNED_IN') {
-          const email = session?.user?.email?.toLowerCase();
-          if (email && allowed) {
-            toast.success('Welcome back! Admin access granted.');
-          } else if (email) {
-            toast.error('This account is not authorized for admin access.');
+        // Show appropriate toast for sign-in
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          const email = session.user.email.toLowerCase();
+          if (ALLOWED_ADMIN_EMAILS.includes(email)) {
+            toast.success(`Welcome back, ${session.user.user_metadata?.full_name || 'Admin'}!`);
+          } else {
+            toast.error('Account not authorized for admin access.');
           }
         }
       } else if (event === 'SIGNED_OUT') {
@@ -77,10 +68,31 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsAdmin(false);
         setLoading(false);
         toast.success('Signed out successfully');
-      } else if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        setSession(session);
       }
     });
+
+    // Also check for existing session on mount (handles page refreshes)
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession && isMounted) {
+          setSession(currentSession);
+          checkAdminAccess(currentSession);
+        }
+      } catch (error) {
+        console.error('[SessionContext] Error checking initial session:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Only check initial session if we're not in the middle of an OAuth flow
+    // The onAuthStateChange will handle OAuth redirects
+    if (!window.location.hash.includes('access_token')) {
+      checkInitialSession();
+    }
 
     return () => {
       isMounted = false;

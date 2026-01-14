@@ -17,13 +17,6 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading, isAdmin } = useSession();
   
-  useEffect(() => {
-    console.log(`[ProtectedRoute] Loading: ${loading}, Session: ${!!session}, IsAdmin: ${isAdmin}`);
-    if (!loading && session && !isAdmin) {
-      console.warn(`[ProtectedRoute] User ${session.user?.email} logged in but not authorized.`);
-    }
-  }, [loading, session, isAdmin]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fcfcfc]">
