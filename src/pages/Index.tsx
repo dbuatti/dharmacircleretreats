@@ -22,10 +22,9 @@ const Index = () => {
       toast.error(hashParams.get('error_description') || 'Authentication error');
     }
     
-    // Clean up the URL if it contains auth parameters (error or success token)
-    if (error || accessToken) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    // NOTE: Removed manual hash cleanup (window.history.replaceState) to allow 
+    // SessionProvider's onAuthStateChange listener to process the session token first.
+    
   }, []);
 
   if (loading) {
@@ -35,8 +34,6 @@ const Index = () => {
       </div>
     );
   }
-
-  // Removed redundant session check, relying on ProtectedRoute in App.tsx
 
   return (
     <div className="relative">
