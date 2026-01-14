@@ -32,6 +32,15 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setSession(session);
       checkAdminAccess(session);
       setLoading(false);
+    })
+    .catch(error => {
+      // Catch potential errors during session retrieval, often due to internal lock issues on rapid unmount/remount
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('[SessionContext] Session retrieval aborted.');
+      } else {
+        console.error('[SessionContext] Error fetching initial session:', error);
+      }
+      setLoading(false);
     });
 
     // Listen for auth changes
